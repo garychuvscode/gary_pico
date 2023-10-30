@@ -1,20 +1,16 @@
 import machine
 import utime
+import time
+import rp2
 
-import test as t
+# fmt: off
+"""
 
-# Define the LED pin
-led = machine.Pin(25, machine.Pin.OUT)
+this will be the main program operated automatically after PICO powered up
+only used for main program development
 
-# Blink the LED in a loop
+"""
 
-while True:
-    led.toggle()  # Toggle the LED state (on/off)
-    utime.sleep(0.5)  # Sleep for 1 second
-    led.toggle()  # Toggle the LED state (on/off)
-    utime.sleep(0.5)  # Sleep for 1 second
-    led.toggle()  # Toggle the LED state (on/off)
-    utime.sleep(0.5)  # Sleep for 1 second
-    led.toggle()  # Toggle the LED state (on/off)
-    utime.sleep(0.5)  # Sleep for 1 second
-    t.test_lde()
+# default frequency 150MHz
+f_now = machine.freq()
+print(f"requency now is: {f_now}")
