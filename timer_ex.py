@@ -5,6 +5,9 @@ import time
 test_o = t.test_obj()
 
 
+# ========== timer example
+
+
 # 定义定时器中断处理函数
 def timer_callback(timer):
     # print("Timer expired, toggle IO")
@@ -25,3 +28,5 @@ while 1:
 #     x = x + 1
 #     time.sleep(5)
 #     pass
+
+# ========== timer example
