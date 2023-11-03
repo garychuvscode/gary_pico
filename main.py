@@ -19,16 +19,27 @@ only used for main program development
 f_now = machine.freq()
 print(f"requency now is: {f_now}")
 
+# ======== import control variable initialization
+
+# 0 is simulation mode (work with teriminal, or USB COM),
+# 1 is real mode (use real interface read and write)
+sim_mode = 1
+# UART receive data
+u_data = ''
+# baud rate selection, mor than 9600, need to change to serial module
+# not pyvisa (9600/115200)
+baud_r_com = 9600
+
+# ======== import setting initialization ( communication port, interface,
+# or other import object for operation )
 
 # 初始化USB串口
-usb_cdc = machine.UART(0, baudrate=115200)
-
+usb_cdc = machine.UART(0, baudrate=baud_r_com)
 # 初始化UART1串口
-uart1 = machine.UART(1, baudrate=115200, tx=Pin(4), rx=Pin(5))  # 替换Pin(4)和Pin(5)为实际的引脚
+uart1 = machine.UART(1, baudrate=baud_r_com, tx=Pin(4), rx=Pin(5))  # 替换Pin(4)和Pin(5)为实际的引脚
 led = machine.Pin(25, machine.Pin.OUT)
 
-# 0 is simulation mode, 1 is real mode
-sim_mode = 0
+
 
 
 def msg_output(counter0 = 0, output_set0=0, msg_content0='', direct_send=0):
@@ -41,22 +52,24 @@ def msg_output(counter0 = 0, output_set0=0, msg_content0='', direct_send=0):
 # 线程函数1
 def thread1():
     # counter for infinite loop, for skipping flag indication
+    # this thread is only for UART operation
     x_count = 0
-    output_set = 500
+    output_set = 6000
     # thread1 is used to checking the UART bus, if there are data input
     while True:
 
         msg_temp = f'now is checking the UART port from USB'
-        msg_output(counter0=x_count, output_set0=200, msg_content0=msg_temp)
+        msg_output(counter0=x_count, output_set0=output_set, msg_content0=msg_temp)
 
         if sim_mode == 1 :
             # for the real mode, check the UART input bus from the USB port
 
             if usb_cdc.any() :
-                data = usb_cdc.read(64)  # 读取USB串口的数据
+                u_data = usb_cdc.read(64)  # 读取USB串口的数据
                 # 在这里可以处理接收到的数据
                 # 例如，你可以回传收到的数据
-                usb_cdc.write(data)
+                usb_cdc.write(u_data)
+                # uart1.write(u_data)
                 led.value(1)
                 time.sleep(4)
                 led.value(0)
@@ -65,19 +78,26 @@ def thread1():
                 time.sleep(4)
                 led.value(0)
                 time.sleep(4)
-                print(f"get the UART input: {data}")
+                print(f"get the UART input: {u_data}")
                 pass
+            else:
+                # uart1.write('NA')
+                pass
+
+            if uart1.any() :
+                t_data = uart_echo()
+                print(t_data)
 
             pass
         else:
 
-            msg_temp = f'finished the UART input'
-            msg_output(counter0=x_count, output_set0=500, msg_content0=msg_temp)
+            msg_temp = f'finished the UART input in sim_mode'
+            msg_output(counter0=x_count, output_set0=output_set, msg_content0=msg_temp)
             # time.sleep_ms(250)
 
         x_count = x_count + 1
 
-        if x_count == 5000 :
+        if x_count == output_set * 5 :
             # reset counter
             x_count = 0
 
@@ -87,12 +107,20 @@ def thread1():
     # end thread
     pass
 
+def uart_echo():
+    '''
+    read in RX and echo at TX after finished reading
+    '''
+    temp_data = uart1.read(64)
+    uart1.write(temp_data)
+
+    return temp_data
+
 
 
 
 # 启动线程1
 _thread.start_new_thread(thread1, ())
-
 
 # 主线程
 while True:
