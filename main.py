@@ -23,7 +23,7 @@ print(f"requency now is: {f_now}")
 
 # 0 is simulation mode (work with teriminal, or USB COM),
 # 1 is real mode (use real interface read and write)
-sim_mode = 1
+sim_mode = 0
 # UART receive data
 u_data = ''
 # baud rate selection, mor than 9600, need to change to serial module
@@ -37,9 +37,13 @@ baud_r_com = 9600
 usb_cdc = machine.UART(0, baudrate=baud_r_com)
 # 初始化UART1串口
 uart1 = machine.UART(1, baudrate=baud_r_com, tx=Pin(4), rx=Pin(5))  # 替换Pin(4)和Pin(5)为实际的引脚
+# LED signla control on PICO, use led.value(1) ; led.value(0) for the related on and off
 led = machine.Pin(25, machine.Pin.OUT)
 
 
+# ======== parameter for selection
+
+uart_com = uart1
 
 
 def msg_output(counter0 = 0, output_set0=0, msg_content0='', direct_send=0):
@@ -48,6 +52,22 @@ def msg_output(counter0 = 0, output_set0=0, msg_content0='', direct_send=0):
     '''
     if counter0 % output_set0 == 0  or direct_send == 1 :
         print(f'{msg_content0}')
+
+def uart_w(uart_obj=uart_com, write_data='', baud0=baud_r_com):
+    '''
+    UART write with proper delay of UART send prevent
+    issue of overlap sending command
+
+    '''
+
+    pass
+
+def uart_r(uart_obj=uart_com, read_byte0=64, baud0=baud_r_com):
+    '''
+    write with proper delay
+    '''
+
+    pass
 
 # 线程函数1
 def thread1():
@@ -81,12 +101,24 @@ def thread1():
                 print(f"get the UART input: {u_data}")
                 pass
             else:
-                # uart1.write('NA')
+                a = b'NAJ'
+                uart1.write(a)
+                # uart1.write(b'NAJ') is same with uart1.write('NAJ') in write
+                time.sleep_ms(5)
+                b = 'BCA'
+                uart1.write(b)
+                time.sleep_ms(5)
+                print(f'finished output of {a} and {b}')
+                time.sleep(2)
+
                 pass
 
             if uart1.any() :
                 t_data = uart_echo()
-                print(t_data)
+                print(f'UART1 echo{t_data} ')
+
+            # uart1.write(b'gary say hi')
+            # print(b'gary say hi')
 
             pass
         else:
@@ -94,6 +126,16 @@ def thread1():
             msg_temp = f'finished the UART input in sim_mode'
             msg_output(counter0=x_count, output_set0=output_set, msg_content0=msg_temp)
             # time.sleep_ms(250)
+
+            a = b'NAJ'
+            uart1.write(a)
+            # uart1.write(b'NAJ') is same with uart1.write('NAJ') in write
+            time.sleep_ms(5)
+            b = 'BCA'
+            uart1.write(b)
+            time.sleep_ms(5)
+            print(f'finished output of {a} and {b} in loop {x_count}')
+            time.sleep(5)
 
         x_count = x_count + 1
 
@@ -112,7 +154,13 @@ def uart_echo():
     read in RX and echo at TX after finished reading
     '''
     temp_data = uart1.read(64)
+    time.sleep_ms(5)
+    # encoded_data = temp_data.encode('utf-8')
+    print(f'the receivd data is: {temp_data}')
+    # print(f'the encode data is: {encoded_data}')
     uart1.write(temp_data)
+    time.sleep_ms(5)
+    # uart1.write(encoded_data)
 
     return temp_data
 
