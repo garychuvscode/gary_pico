@@ -23,12 +23,21 @@ print(f"requency now is: {f_now}")
 
 # 0 is simulation mode (work with teriminal, or USB COM),
 # 1 is real mode (use real interface read and write)
-sim_mode = 0
-# UART receive data
-u_data = ''
+sim_mode = 1
+# UART receive data buffer
+u_data_r = ''
+# UART send data buffer
+u_data_w = ''
 # baud rate selection, mor than 9600, need to change to serial module
 # not pyvisa (9600/115200)
 baud_r_com = 9600
+# new command get => 1-need to update command, 0-don't have new command
+new_cmd = 0
+# 1-read and write enable; 0-read and
+read_write_busy = 0
+# the data loaded to the main (update from read register)
+u_data_main= ''
+
 
 # ======== import setting initialization ( communication port, interface,
 # or other import object for operation )
@@ -39,10 +48,13 @@ usb_cdc = machine.UART(0, baudrate=baud_r_com)
 uart1 = machine.UART(1, baudrate=baud_r_com, tx=Pin(4), rx=Pin(5))  # 替换Pin(4)和Pin(5)为实际的引脚
 # LED signla control on PICO, use led.value(1) ; led.value(0) for the related on and off
 led = machine.Pin(25, machine.Pin.OUT)
+pin_0 = machine.Pin(0, machine.Pin.OUT)
 
 
 # ======== parameter for selection
 
+# assign default COM port, use USB_COM for real usage
+# UART1 is used for debugging
 uart_com = uart1
 
 
@@ -53,21 +65,54 @@ def msg_output(counter0 = 0, output_set0=0, msg_content0='', direct_send=0):
     if counter0 % output_set0 == 0  or direct_send == 1 :
         print(f'{msg_content0}')
 
-def uart_w(uart_obj=uart_com, write_data='', baud0=baud_r_com):
+def uart_w(uart_obj=uart_com, write_data=u_data_w, baud0=baud_r_com, margin_ind=1.2):
     '''
     UART write with proper delay of UART send prevent
     issue of overlap sending command
 
-    '''
+    since uart1 is the debug bus, send pack to the debug
+    bus when give command
 
+    default with 20% margin
+
+    '''
+    read_write_busy = 1
+    data_len = len(write_data)
+
+    uart_obj.write(write_data)
+    # reserve for 100 byte of write delay to prevent issue of
+    wait_time = 1/baud_r_com * data_len * margin_ind * 1000
+    time.sleep_ms(wait_time)
+
+    # indicate update
+    read_write_busy = 0
     pass
 
-def uart_r(uart_obj=uart_com, read_byte0=64, baud0=baud_r_com):
+def uart_r(uart_obj=uart_com, read_byte0=64, baud0=baud_r_com, margin_ind=1.2, echo0=1, decode0='big5'):
     '''
-    write with proper delay
+    read with proper delay, default 20% of margin
     '''
+    global new_cmd
+    read_write_busy = 1
+    print(f'start read and update status: read: {read_write_busy}')
 
-    pass
+    u_data_r = uart_obj.read(read_byte0)
+    print(f'the data get is: {u_data_r}')
+    # u_data_r = u_data_r.decode(encoding=decode0)
+    # reserve for 100 byte of write delay to prevent issue of
+    wait_time = int(1/baud_r_com * read_byte0 * margin_ind * 1000)
+    time.sleep_ms(wait_time)
+
+    if echo0 == 1 :
+        # no matter what is the input, echo the data to the output
+        # uart_w(uart_obj=uart1, write_data=u_data_r)
+        pass
+
+    # set indicator to 1 after command read finished
+    new_cmd = 1
+    read_write_busy = 0
+    print(f'finished read and update status: read: {read_write_busy}, new : {new_cmd}')
+    return u_data_r
 
 # 线程函数1
 def thread1():
@@ -84,38 +129,39 @@ def thread1():
         if sim_mode == 1 :
             # for the real mode, check the UART input bus from the USB port
 
-            if usb_cdc.any() :
-                u_data = usb_cdc.read(64)  # 读取USB串口的数据
+            if uart_com.any() :
+                # receive from selected UART port
+                uart_r()
                 # 在这里可以处理接收到的数据
                 # 例如，你可以回传收到的数据
-                usb_cdc.write(u_data)
-                # uart1.write(u_data)
-                led.value(1)
-                time.sleep(4)
-                led.value(0)
-                time.sleep(4)
-                led.value(1)
-                time.sleep(4)
-                led.value(0)
-                time.sleep(4)
-                print(f"get the UART input: {u_data}")
+                # led.value(1)
+                # time.sleep(4)
+                # led.value(0)
+                # time.sleep(4)
+                # led.value(1)
+                # time.sleep(4)
+                # led.value(0)
+                # time.sleep(4)
+                print(f"get the UART input: {u_data_r}")
                 pass
             else:
-                a = b'NAJ'
-                uart1.write(a)
-                # uart1.write(b'NAJ') is same with uart1.write('NAJ') in write
-                time.sleep_ms(5)
-                b = 'BCA'
-                uart1.write(b)
-                time.sleep_ms(5)
-                print(f'finished output of {a} and {b}')
-                time.sleep(2)
+                # a = b'NAJ'
+                # uart1.write(a)
+                # # uart1.write(b'NAJ') is same with uart1.write('NAJ') in write
+                # time.sleep_ms(5)
+                # b = 'BCA'
+                # uart1.write(b)
+                # time.sleep_ms(5)
+                # print(f'finished output of {a} and {b}')
+                # time.sleep(2)
+                print('no input from the UART port')
+                time.sleep(1)
 
                 pass
 
-            if uart1.any() :
-                t_data = uart_echo()
-                print(f'UART1 echo{t_data} ')
+            # if uart1.any() :
+            #     t_data = uart_echo()
+            #     print(f'UART1 echo{t_data} ')
 
             # uart1.write(b'gary say hi')
             # print(b'gary say hi')
@@ -134,7 +180,7 @@ def thread1():
             b = 'BCA'
             uart1.write(b)
             time.sleep_ms(5)
-            print(f'finished output of {a} and {b} in loop {x_count}')
+            print(f'finished output of {a} and {b} in loop {x_count}, sim_mode = {sim_mode}')
             time.sleep(5)
 
         x_count = x_count + 1
@@ -168,20 +214,51 @@ def uart_echo():
 
 
 # 启动线程1
-_thread.start_new_thread(thread1, ())
+# _thread.start_new_thread(thread1, ())
 
+# default blink settings
+blink = 0.5
 # 主线程
 while True:
+
+
+
+    print(f'read: {read_write_busy}, new cmd: {new_cmd}')
+    if read_write_busy == 0 and new_cmd == 1 :
+        # update command
+        u_data_main = u_data_r
+        # finished command updated
+        new_cmd = 0
+        print(f'u_data_main updated to : {u_data_main}')
+
+        if u_data_main == b'a' :
+            # for input a
+            blink = 0.2
+        elif u_data_main == b'b' :
+            # for input b
+            blink = 2
+        elif u_data_main == b'c' :
+            # for input c
+            blink = 5
+        else:
+            blink = 0.5
+
     # 在这里可以执行其他任务
+    # operation for new command, infinition loop
+
     led.value(1)
-    time.sleep(0.3)
+    pin_0.value(1)
+    time.sleep(blink)
     led.value(0)
-    time.sleep(0.3)
+    pin_0.value(0)
+    time.sleep(blink)
     led.value(1)
-    time.sleep(0.3)
+    pin_0.value(1)
+    time.sleep(blink)
     led.value(0)
-    time.sleep(0.3)
-    print("Main Thread is running")
+    pin_0.value(0)
+    time.sleep(blink)
+    print(f"Main Thread is running with blink= {blink}")
     pass
 
 # # able to use this method and COM port open
