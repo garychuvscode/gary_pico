@@ -4,6 +4,7 @@ import time
 import rp2
 import _thread
 from machine import Pin
+import sys
 
 import os
 
@@ -49,6 +50,8 @@ uart1 = machine.UART(1, baudrate=baud_r_com, tx=Pin(4), rx=Pin(5))  # 替换Pin(
 # LED signla control on PICO, use led.value(1) ; led.value(0) for the related on and off
 led = machine.Pin(25, machine.Pin.OUT)
 pin_0 = machine.Pin(0, machine.Pin.OUT)
+
+
 
 
 # ======== parameter for selection
@@ -246,6 +249,83 @@ blink = 0.5
 
 x_count = 0
 output_set = 6000
+# 主线程
+while True:
+
+    msg_temp = f'now is checking the UART port from USB'
+    msg_output(counter0=x_count, output_set0=output_set, msg_content0=msg_temp)
+
+    if sim_mode == 1 :
+        # for the real mode, check the UART input bus from the USB port
+
+        # receive from selected UART port
+        try :
+            u_data_r = sys.stdin.readline().strip()
+            print_debug(f"get the UART input: {u_data_r}")
+
+        except :
+            print_debug('no input from the UART port')
+            time.sleep(1)
+
+            pass
+
+        pass
+    else:
+
+        msg_temp = f'finished the UART input in sim_mode in loop {x_count}, sim_mode = {sim_mode}'
+        msg_output(counter0=x_count, output_set0=output_set, msg_content0=msg_temp)
+
+        time.sleep(5)
+
+
+    print_debug(f'update status read: {read_write_busy}, new cmd: {new_cmd}')
+    if read_write_busy == 0 and new_cmd == 1 :
+        # update command
+        u_data_main = u_data_r
+        # finished command updated
+        new_cmd = 0
+        print_debug(f'u_data_main updated to : {u_data_main}')
+
+        if u_data_main == 'a' :
+            # for input a
+            blink = 0.2
+        elif u_data_main == 'b' :
+            # for input b
+            blink = 2
+        elif u_data_main == 'c' :
+            # for input c
+            blink = 5
+        else:
+            blink = 0.5
+
+    # 在这里可以执行其他任务
+    # operation for new command, infinition loop
+
+    led.value(1)
+    pin_0.value(1)
+    time.sleep(blink)
+    led.value(0)
+    pin_0.value(0)
+    time.sleep(blink)
+    led.value(1)
+    pin_0.value(1)
+    time.sleep(blink)
+    led.value(0)
+    pin_0.value(0)
+    time.sleep(blink)
+    print_debug(f"Main Thread is running with blink= {blink}")
+
+
+    x_count = x_count + 1
+
+    if x_count == output_set * 5 :
+        # reset counter
+        x_count = 0
+
+    pass
+
+
+
 # 主线程
 while True:
 
