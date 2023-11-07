@@ -17,7 +17,7 @@ only used for main program development
 
 # default frequency 150MHz
 f_now = machine.freq()
-print(f"requency now is: {f_now}")
+# print(f"requency now is: {f_now}")
 
 # ======== import control variable initialization
 
@@ -55,15 +55,26 @@ pin_0 = machine.Pin(0, machine.Pin.OUT)
 
 # assign default COM port, use USB_COM for real usage
 # UART1 is used for debugging
-uart_com = uart1
-uart_debug = usb_cdc
+uart_com = usb_cdc
+# 0 is computer bus; or using other UART port
+uart_debug = uart1
 
-def print_debug_bus(content='', debug_bus=uart_debug):
+def print_debug(content='', debug_bus=uart_debug):
     '''
     replace the original print function to another debug bus
     '''
-    debug_bus.write(content)
-    time.sleep_ms(30)
+    prog_fake = 0
+    if prog_fake == 1 :
+        debug_bus = uart1
+
+    if debug_bus != 0 :
+        content = content + '\n'
+        print(content)
+        debug_bus.write(content)
+        time.sleep_ms(30)
+    else:
+        print(content)
+
     pass
 
 
@@ -72,7 +83,7 @@ def msg_output(counter0 = 0, output_set0=0, msg_content0='', direct_send=0):
     print message based on the output_set in infinite loop
     '''
     if counter0 % output_set0 == 0  or direct_send == 1 :
-        print(f'{msg_content0}')
+        print_debug(f'{msg_content0}')
 
 def uart_w(uart_obj=uart_com, write_data=u_data_w, baud0=baud_r_com, margin_ind=1.2):
     '''
@@ -85,12 +96,13 @@ def uart_w(uart_obj=uart_com, write_data=u_data_w, baud0=baud_r_com, margin_ind=
     default with 20% margin
 
     '''
+    global read_write_busy
     read_write_busy = 1
     data_len = len(write_data)
 
     uart_obj.write(write_data)
     # reserve for 100 byte of write delay to prevent issue of
-    wait_time = 1/baud_r_com * data_len * margin_ind * 1000
+    wait_time = int(1/baud_r_com * data_len * margin_ind * 1000)
     time.sleep_ms(wait_time)
 
     # indicate update
@@ -105,12 +117,12 @@ def uart_r(uart_obj=uart_com, read_byte0=64, baud0=baud_r_com, margin_ind=1.2, e
     global read_write_busy
 
     read_write_busy = 1
-    print(f'start read and update status: read: {read_write_busy}')
+    print_debug(f'start read and update status: read: {read_write_busy}')
 
     u_data_r0 = uart_obj.read(read_byte0)
     u_data_r0_u = u_data_r0.decode("utf-8")
     u_data_r0_b = u_data_r0.decode("big5")
-    print(f'the data get is: {u_data_r0} \n utf8 to str:{u_data_r0_u}\n big5 to str:{u_data_r0_b}')
+    print_debug(f'the data get is: {u_data_r0} \n utf8 to str:{u_data_r0_u}\n big5 to str:{u_data_r0_b}')
     # u_data_r = u_data_r.decode(encoding=decode0)
     # reserve for 100 byte of write delay to prevent issue of
     wait_time = int(1/baud_r_com * read_byte0 * margin_ind * 1000)
@@ -118,14 +130,14 @@ def uart_r(uart_obj=uart_com, read_byte0=64, baud0=baud_r_com, margin_ind=1.2, e
 
     if echo0 == 1 :
         # no matter what is the input, echo the data to the output
-        # uart_w(uart_obj=uart1, write_data=u_data_r)
+        uart_w(uart_obj=uart1, write_data=u_data_r)
         pass
 
     # set indicator to 1 after command read finished
     new_cmd = 1
     read_write_busy = 0
-    print(f'finished read and update status: read: {read_write_busy}, new : {new_cmd}')
-    return u_data_r0
+    print_debug(f'finished read and update status: read: {read_write_busy}, new : {new_cmd}')
+    return u_data_r0_u
 
 # 线程函数1
 def thread1():
@@ -155,7 +167,7 @@ def thread1():
                 # time.sleep(4)
                 # led.value(0)
                 # time.sleep(4)
-                print(f"get the UART input: {u_data_r}")
+                print_debug(f"get the UART input: {u_data_r}")
                 pass
             else:
                 # a = b'NAJ'
@@ -165,19 +177,19 @@ def thread1():
                 # b = 'BCA'
                 # uart1.write(b)
                 # time.sleep_ms(5)
-                # print(f'finished output of {a} and {b}')
+                # print_debug(f'finished output of {a} and {b}')
                 # time.sleep(2)
-                print('no input from the UART port')
+                print_debug('no input from the UART port')
                 time.sleep(1)
 
                 pass
 
             # if uart1.any() :
             #     t_data = uart_echo()
-            #     print(f'UART1 echo{t_data} ')
+            #     print_debug(f'UART1 echo{t_data} ')
 
             # uart1.write(b'gary say hi')
-            # print(b'gary say hi')
+            # print_debug(b'gary say hi')
 
             pass
         else:
@@ -193,7 +205,7 @@ def thread1():
             b = 'BCA'
             uart1.write(b)
             time.sleep_ms(5)
-            print(f'finished output of {a} and {b} in loop {x_count}, sim_mode = {sim_mode}')
+            print_debug(f'finished output of {a} and {b} in loop {x_count}, sim_mode = {sim_mode}')
             time.sleep(5)
 
         x_count = x_count + 1
@@ -215,8 +227,8 @@ def uart_echo():
     temp_data = uart1.read(64)
     time.sleep_ms(5)
     # encoded_data = temp_data.encode('utf-8')
-    print(f'the receivd data is: {temp_data}')
-    # print(f'the encode data is: {encoded_data}')
+    print_debug(f'the receivd data is: {temp_data}')
+    # print_debug(f'the encode data is: {encoded_data}')
     uart1.write(temp_data)
     time.sleep_ms(5)
     # uart1.write(encoded_data)
@@ -256,7 +268,7 @@ while True:
             # time.sleep(4)
             # led.value(0)
             # time.sleep(4)
-            print(f"get the UART input: {u_data_r}")
+            print_debug(f"get the UART input: {u_data_r}")
             pass
         else:
             # a = b'NAJ'
@@ -266,19 +278,19 @@ while True:
             # b = 'BCA'
             # uart1.write(b)
             # time.sleep_ms(5)
-            # print(f'finished output of {a} and {b}')
+            # print_debug(f'finished output of {a} and {b}')
             # time.sleep(2)
-            print('no input from the UART port')
+            print_debug('no input from the UART port')
             time.sleep(1)
 
             pass
 
         # if uart1.any() :
         #     t_data = uart_echo()
-        #     print(f'UART1 echo{t_data} ')
+        #     print_debug(f'UART1 echo{t_data} ')
 
         # uart1.write(b'gary say hi')
-        # print(b'gary say hi')
+        # print_debug(b'gary say hi')
 
         pass
     else:
@@ -294,26 +306,26 @@ while True:
         b = 'BCA'
         uart1.write(b)
         time.sleep_ms(5)
-        print(f'finished output of {a} and {b} in loop {x_count}, sim_mode = {sim_mode}')
+        print_debug(f'finished output of {a} and {b} in loop {x_count}, sim_mode = {sim_mode}')
         time.sleep(5)
 
 
 
-    print(f'read: {read_write_busy}, new cmd: {new_cmd}')
+    print_debug(f'read: {read_write_busy}, new cmd: {new_cmd}')
     if read_write_busy == 0 and new_cmd == 1 :
         # update command
         u_data_main = u_data_r
         # finished command updated
         new_cmd = 0
-        print(f'u_data_main updated to : {u_data_main}')
+        print_debug(f'u_data_main updated to : {u_data_main}')
 
-        if u_data_main == b'a' :
+        if u_data_main == 'a' :
             # for input a
             blink = 0.2
-        elif u_data_main == b'b' :
+        elif u_data_main == 'b' :
             # for input b
             blink = 2
-        elif u_data_main == b'c' :
+        elif u_data_main == 'c' :
             # for input c
             blink = 5
         else:
@@ -334,7 +346,7 @@ while True:
     led.value(0)
     pin_0.value(0)
     time.sleep(blink)
-    print(f"Main Thread is running with blink= {blink}")
+    print_debug(f"Main Thread is running with blink= {blink}")
 
 
     x_count = x_count + 1
@@ -401,6 +413,6 @@ while True:
 #         input_data = data.decode('utf-8')
 #         response = "Received: " + data.decode('utf-8')
 #         uart.write(response)
-#         print(f'the received message is:{response}')
+#         print_debug(f'the received message is:{response}')
 
 #     time.sleep(0.1)  # 稍微延迟以允许其他操作
