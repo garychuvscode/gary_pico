@@ -64,13 +64,26 @@ class test_obj:
         self.gpio_0.value(0)
         pass
 
+    def infinite_toggle(self, diration0=0.2):
+
+        while 1 :
+
+            x = float(input())
+
+            self.led.value(1)
+            utime.sleep(x)
+            self.led.value(0)
+            utime.sleep(x)
+
+        pass
+
 
 if __name__ == "__main__":
     # testing for test_obj
 
     test_o = test_obj()
 
-    test_index = 2
+    test_index = 3
 
     if test_index == 0:
         # LDO toggle
@@ -83,3 +96,8 @@ if __name__ == "__main__":
 
     elif test_index == 2:
         test_o.time_duration_testing()
+
+    elif test_index == 3:
+        t = 0.1
+        print(f'this is test, duration {t}')
+        test_o.infinite_toggle(t)
