@@ -75,6 +75,16 @@ class test_obj:
             self.led.value(0)
             utime.sleep(x)
 
+            self.led.value(1)
+            utime.sleep(x)
+            self.led.value(0)
+            utime.sleep(x)
+
+            self.led.value(1)
+            utime.sleep(x)
+            self.led.value(0)
+            utime.sleep(x)
+
         pass
 
 
