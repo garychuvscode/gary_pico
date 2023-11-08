@@ -7,6 +7,7 @@ import time
 import rp2
 from machine import Pin
 
+
 """
 
 this will be the main program operated automatically after PICO powered up
@@ -34,6 +35,9 @@ class pico_emb():
 
         self.led = machine.Pin(25, machine.Pin.OUT)
         self.uart1 = machine.UART(1, baudrate=self.baud_r_com, tx=Pin(4), rx=Pin(5))  # 替换Pin(4)和Pin(5)为实际的引脚
+
+        # PWM settings
+        pwm0 = machine.PWM(Pin(0), freq=2000, duty_u16=32768)
 
         # debug led settings
         self.led1 = machine.Pin(1, machine.Pin.OUT)
