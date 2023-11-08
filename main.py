@@ -21,13 +21,13 @@ f_now = machine.freq()
 
 # 0 is simulation mode (work with teriminal, or USB COM),
 # 1 is real mode (use real interface read and write)
-sim_mode = 1
+sim_mode = 0
 
 class pico_emb():
 
     def __init__(self, sim_mcu0=0):
 
-
+        # input command
         self.cmd_array = []
 
         self.sim_mcu = sim_mcu0
@@ -45,6 +45,21 @@ class pico_emb():
         self.led3 = machine.Pin(13, machine.Pin.OUT)
         self.led4 = machine.Pin(18, machine.Pin.OUT)
         self.led5 = machine.Pin(22, machine.Pin.OUT)
+
+
+        self.io_8 = machine.Pin(8, machine.Pin.OUT)
+        self.io_9 = machine.Pin(9, machine.Pin.OUT)
+        self.io_10 = machine.Pin(10, machine.Pin.OUT)
+        self.io_11 = machine.Pin(11, machine.Pin.OUT)
+        self.io_12 = machine.Pin(12, machine.Pin.OUT)
+        self.io_13 = machine.Pin(13, machine.Pin.OUT)
+
+
+        # IO reference define: name(GPIO number):IO_object
+        self.io_ref_array = { '8':self.io_8, '9':self.io_9, '10':self.io_10, '11':self.io_11, '12':self.io_12, '13':self.io_13}
+        # status of the IO can be read directly from the => pin_status = pin.value()
+        # the value function without input will return the result
+        # self.io_status_array = { '8':0, '9':0, '10':0, '11':0, '12':0, '13':0}
 
         # reset all the LED
         self.debug_led(num0=1, value0=0, all=1)
@@ -117,20 +132,62 @@ class pico_emb():
         '''
 
         cmd_in_raw = input()
+        self.print_debug(f'input cmd is :{cmd_in_raw}')
         self.led_toggle()
 
         # split command with '.'
         self.cmd_array = cmd_in_raw.split('.')
+        self.print_debug(f'split cmd is :{self.cmd_array}')
+        self.print_debug(f'mode: {self.cmd_array[0]}')
+        for i in range ()
         '''
         deifnition of command
 
-        I2C.{device;XX}.{register;XX}.{data;XX}
+        I2C.{device;XX}.{register;XX}.{read/write}.{data;XX or length;x}
         PWM.{frequency;Hz}.{duty;%}.{en;0 or 1}
         PIO.
-        GPIO.{number}.{}
+        GPIO.{number}.{status;1 or 0}
+        GPIO.8.1
 
 
         '''
+        pass
+
+    def i2c_read(self, device=0, regaddr=0, len=1):
+
+        pass
+
+    def i2c_write(self, device=0, regaddr=0, datas=0):
+
+        pass
+
+    def io_change(self, num0=0, status0=0):
+        '''
+        change IO => refer to pin out definition
+        update initialization based on the definition
+        '''
+        num0 = str(num0)
+        if status0 == 1 or status0 == 0 :
+            self.io_ref_array[num0].value(status0)
+        self.print_debug(f'io_change, ch{num0}, status{status0}')
+
+        pass
+
+    def io_reset(self):
+        '''
+        set all to 0
+        '''
+
+        x_c = len(self.io_ref_array)
+        x = 0
+        while x < x_c :
+            temp_io = list(self.io_ref_array.values())[0]
+            temp_io.value(0)
+            x = x + 1
+            pass
+
+        self.print_debug(f'io_reset done')
+        pass
 
     def pico_emb_main(self):
         '''
@@ -141,6 +198,11 @@ class pico_emb():
 
             self.wait_cmd()
 
+            if self.cmd_array[0] == 'I2C' :
+                # self.i2c_read
+
+                pass
+
 
 
         pass
@@ -149,3 +211,5 @@ class pico_emb():
 pico_grace= pico_emb(sim_mcu0=sim_mode)
 # pico_grace.pico_emb_main()
 # pico_grace.debug_led(num0=1, value0=1, all=1)
+
+pico_grace.pico_emb_main()
