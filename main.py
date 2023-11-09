@@ -57,6 +57,8 @@ class pico_emb():
 
         # IO reference define: name(GPIO number):IO_object
         self.io_ref_array = { '8':self.io_8, '9':self.io_9, '10':self.io_10, '11':self.io_11, '12':self.io_12, '13':self.io_13}
+        # relay array, need to have sequence define in source code
+        self.relay_ref_array = []
         # status of the IO can be read directly from the => pin_status = pin.value()
         # the value function without input will return the result
         # self.io_status_array = { '8':0, '9':0, '10':0, '11':0, '12':0, '13':0}
@@ -141,7 +143,7 @@ class pico_emb():
         self.print_debug(f'mode: {self.cmd_array[0]}')
 
         # print the command out
-        for i in range (0, len(self.cmd_array)-1, 1):
+        for i in range (0, len(self.cmd_array), 1):
             print(f'item {i}, is {self.cmd_array[i]}')
 
 
@@ -168,15 +170,20 @@ class pico_emb():
 
         pass
 
-    def io_change(self, num0=0, status0=0):
+    def io_change(self, num0='', status0=0):
         '''
         change IO => refer to pin out definition
         update initialization based on the definition
+        minimum toggle time without print, "within 100us"
         '''
         num0 = str(num0)
         if status0 == 1 or status0 == 0 :
             self.io_ref_array[num0].value(status0)
-        self.print_debug(f'io_change, ch{num0}, status{status0}')
+        # 231109 there are IO delay concern for minimum toggling time in this function
+        # cancel the print function after debug finished
+        # print time is based on the UART port operation and baud rate
+        # self.print_debug(f'io_change, ch {num0}, status {status0}')
+        # time.sleep_us(0)
 
         pass
 
@@ -210,12 +217,17 @@ class pico_emb():
 
                 pass
             elif self.cmd_array[0] == 'gio' :
+                self.io_change(num0=self.cmd_array[1], status0=int(self.cmd_array[2]))
                 pass
             elif self.cmd_array[0] == 'pio' :
                 pass
             elif self.cmd_array[0] == 'pwm' :
                 pass
             elif self.cmd_array[0] == 'en_mode' :
+                pass
+            elif self.cmd_array[0] == 'grace' :
+                self.io_change(num0=self.cmd_array[1], status0=int(1))
+                self.io_change(num0=self.cmd_array[1], status0=int(0))
                 pass
 
 

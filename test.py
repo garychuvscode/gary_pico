@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
     test_o = test_obj()
 
-    test_index = 3
+    test_index = 4
 
     if test_index == 0:
         # LDO toggle
@@ -111,3 +111,6 @@ if __name__ == "__main__":
         t = 0.1
         print(f'this is test, duration {t}')
         test_o.infinite_toggle(t)
+
+    elif test_index == 4:
+        test_o.toggle_once()
