@@ -139,15 +139,22 @@ class pico_emb():
         self.cmd_array = cmd_in_raw.split('.')
         self.print_debug(f'split cmd is :{self.cmd_array}')
         self.print_debug(f'mode: {self.cmd_array[0]}')
-        for i in range ()
+
+        # print the command out
+        for i in range (0, len(self.cmd_array)-1, 1):
+            print(f'item {i}, is {self.cmd_array[i]}')
+
+
         '''
         deifnition of command
 
-        I2C.{device;XX}.{register;XX}.{read/write}.{data;XX or length;x}
-        PWM.{frequency;Hz}.{duty;%}.{en;0 or 1}
-        PIO.
-        GPIO.{number}.{status;1 or 0}
-        GPIO.8.1
+        i2c.{device;XX}.{register;XX}.{read/write}.{data;XX or length;x}
+        pwm.{frequency;Hz}.{duty;%}.{en;0 or 1}
+        pio.
+        gio.{number}.{status;1 or 0}
+        p_mode.{1-4}
+        # mode sequence: 1-4: (EN, SW) = (0, 0),  (0, 1), (1, 0), (1, 1) => default normal
+        gio.8.1
 
 
         '''
@@ -198,9 +205,17 @@ class pico_emb():
 
             self.wait_cmd()
 
-            if self.cmd_array[0] == 'I2C' :
+            if self.cmd_array[0] == 'i2c' :
                 # self.i2c_read
 
+                pass
+            elif self.cmd_array[0] == 'gio' :
+                pass
+            elif self.cmd_array[0] == 'pio' :
+                pass
+            elif self.cmd_array[0] == 'pwm' :
+                pass
+            elif self.cmd_array[0] == 'en_mode' :
                 pass
 
 
