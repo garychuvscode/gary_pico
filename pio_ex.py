@@ -23,21 +23,18 @@ time.sleep(0.2)
 @rp2.asm_pio(set_init=rp2.PIO.OUT_LOW)
 def blink():
     set(pins, 1)[0]
-    nop()[31]
-    nop()[31]
     set(pins, 0)[0]
-    nop()[31]
-    nop()[31]
-    nop()[31]
-    nop()[31]
     jmp("done")
     label("done")
 
-sm = rp2.StateMachine(0, blink, freq=100000, set_base=Pin(8))
+sm = rp2.StateMachine(0, blink, freq=10000000, set_base=Pin(8))
 sm.active(1)
-time.sleep_ms(6)
 sm.active(0)
-machine.soft_reset(machines=[machine.SOFT_RESET_PIO0])
+# # machine.soft_reset(machines=[machine.SOFT_RESET_PIO0])
+# while True:
+#     data = sm.get()  # 从 FIFO 读取数据，但忽略它
+#     if data == -1:  # 当 FIFO 为空时，退出循环
+#         break
 """
 
 print(cmd)
@@ -63,3 +60,18 @@ pattern gen need:
 # led.value(0)
 
 str_to_code(cmd)
+
+
+"""
+this eaxmple use python to process asm_pio, not suggest to use
+delay too long.. (6ms)
+
+@rp2.asm_pio(set_init=rp2.PIO.OUT_LOW)
+def blink():
+    pass
+sm = rp2.StateMachine(0, blink, freq=2000, set_base=Pin(8))
+sm.active(1)
+sm.exec("set(pins, 1)[0]")
+sm.exec("set(pins, 0)[0]")
+
+"""
