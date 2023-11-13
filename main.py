@@ -7,6 +7,9 @@ import time
 import rp2
 from machine import Pin
 
+# this lib can't be used in micropython
+# # this import is used for the string TAB adjustment
+# import textwrap
 
 """
 
@@ -21,7 +24,7 @@ f_now = machine.freq()
 
 # 0 is simulation mode (work with teriminal, or USB COM),
 # 1 is real mode (use real interface read and write)
-sim_mode = 0
+sim_mode = 1
 
 class pico_emb():
 
@@ -33,6 +36,10 @@ class pico_emb():
         self.str_cmd =''
 
         self.sim_mcu = sim_mcu0
+
+        # simulation mode temp space
+        self.sim_args = []
+        self.sim_kwargs = []
 
         # ===== the only LDE on PICO, reserve for LED
         self.led = machine.Pin(25, machine.Pin.OUT)
@@ -158,14 +165,15 @@ class pico_emb():
 
         pass
 
-    def print_debug(self, content=''):
+    def print_debug(self, content='', always_print0=0):
         '''
         replace the original print function to another debug bus
         '''
-        if self.sim_mcu == 1:
+        if self.sim_mcu == 1 and always_print0 == 1:
             # real mode change output to the debug bus
             self.uart1.write(content)
-        else:
+            print(content)
+        elif self.sim_mcu == 0:
             print(content)
             pass
 
@@ -175,7 +183,7 @@ class pico_emb():
         '''
         command input structure
         '''
-
+        self.print_debug(content=f'Dear Grace, pico is ready for you :)', always_print0=1)
         cmd_in_raw = input()
         self.print_debug(f'input cmd is :{cmd_in_raw}')
         self.led_toggle()
@@ -187,7 +195,7 @@ class pico_emb():
 
         # print the command out
         for i in range (0, len(self.cmd_array), 1):
-            print(f'item {i}, is {self.cmd_array[i]}')
+            self.print_debug(f'item {i}, is {self.cmd_array[i]}')
 
 
         '''
@@ -222,13 +230,17 @@ class pico_emb():
         minimum toggle time without print, "within 100us"
         '''
         num0 = str(num0)
-        if status0 == 1 or status0 == 0 :
-            self.io_ref_array[num0].value(status0)
-        # 231109 there are IO delay concern for minimum toggling time in this function
-        # cancel the print function after debug finished
-        # print time is based on the UART port operation and baud rate
-        # self.print_debug(f'io_change, ch {num0}, status {status0}')
-        # time.sleep_us(0)
+        if self.sim_mcu == 1:
+            if status0 == 1 or status0 == 0 :
+                self.io_ref_array[num0].value(status0)
+            # 231109 there are IO delay concern for minimum toggling time in this function
+            # cancel the print function after debug finished
+            # print time is based on the UART port operation and baud rate
+            # self.print_debug(f'io_change, ch {num0}, status {status0}')
+            # time.sleep_us(0)
+            pass
+        else:
+            self.print_debug(content=f'io change in sim mode, with num0:{num0}, state:{status0}')
 
         pass
 
@@ -280,7 +292,7 @@ class pico_emb():
             self.io_change(num0=str(self.sw_ind), status0=1)
             pass
         else:
-            self.print_debug(f'command :{mode_index} is invalid, no action')
+            self.print_debug(f'command :{mode_index} is invalid, no action', always_print0=1)
             pass
 
         pass
@@ -333,6 +345,9 @@ class pico_emb():
         us100_counter_cal =100
 
         io_state0 = io_temp.value()
+        if self.sim_mcu == 0 :
+            # example is low pulse
+            io_state0 = 1
 
         # io_state should be:
         if pulse_type0 == 'LOW':
@@ -346,7 +361,7 @@ class pico_emb():
             # valid pulse request
             # string command used as follow
 
-            self.str_cmd = 'io_temp.value(io_state_lock)'
+            self.str_cmd = '''io_temp.value(io_state_lock)\n'''
 
             '''
             # string caculated example :
@@ -360,30 +375,116 @@ class pico_emb():
             io_temp.value(io_state_lock)
             '''
 
-            single_pulse = '''
-time.sleep_us(us100_counter_cal)
+            single_pulse = '''time.sleep_us(us100_counter_cal)
 io_temp.value(io_tran)
 time.sleep_us(us100_counter_cal)
 io_temp.value(io_state_lock)
 '''
-
+            self.print_debug(f'the single pulse command is {single_pulse}')
             x_pulse = 0
-            while x_pulse < pulse_amount0 :
+            while x_pulse < int(pulse_amount0) :
 
                 self.str_cmd = self.str_cmd + single_pulse
                 # maybe it's able to compare with using loop with direct command change
                 # optional [erformance comparison
+                self.print_debug(content=f'pulse_count x in {x_pulse} {pulse_amount0}')
+                self.print_debug(content=f'command become \n{self.str_cmd}')
 
                 x_pulse = x_pulse + 1
                 pass
+            self.print_debug(f'the final command is \n{self.str_cmd}')
 
         else:
             # invalid pulse request
             self.print_debug(f'invalid pulse request for pin: {num0}, default state: {io_state0} with {pulse_type0} pulse request')
 
-        exec(self.str_cmd)
+        if self.sim_mcu == 1:
+            # this is micropython command which causing crash during sim mode
+            # exec(self.str_cmd)
+            self.str_to_code(string0=self.str_cmd)
 
-        self.print_debug(f'pulse finished with: \n {self.str_cmd} \n, is the correct Grace? ')
+        self.print_debug(f'pulse finished with: \n{self.str_cmd} \n, is this correct Grace? ',always_print0=1)
+
+        pass
+
+    def sim_assign(self, *args, **kwargs):
+        '''
+        the simulation mode input with different amount of variable input
+        => virtual machine for PICO
+        *args is variable input; **kwargs is dictionary input
+        refer to python, parameter loaded for further information,
+        there are example setting the test mode to 1.5
+        to access input variable:
+        print('this is kwargs 1 ' + str(kwargs['para1']))
+        print('this is args 1 ' + str(args[0]))
+        '''
+        # save the input to list and kwargs
+        self.sim_args = args
+        self.sim_kwargs = kwargs
+        pass
+
+    def dedent_skip_1(self, code):
+        lines = code.split('\n')
+        # 计算最小缩进
+        min_indent = float('inf')
+        for line in lines[1:]:  # 跳过第一行，因为它通常是模块级别的缩进
+            stripped = line.lstrip()
+            if stripped:
+                indent = len(line) - len(stripped)
+                min_indent = min(min_indent, indent)
+
+        # 移除最小缩进
+        dedented_lines = [line[min_indent:] for line in lines]
+        dedented_code = '\n'.join(dedented_lines)
+        return dedented_code
+
+    def dedent(self, code):
+        lines = code.split('\n')
+        # 计算最小缩进
+        min_indent = float('inf')
+        for line in lines:
+            stripped = line.lstrip()
+            if stripped:
+                indent = len(line) - len(stripped)
+                min_indent = min(min_indent, indent)
+
+        # 移除最小缩进
+        dedented_lines = [line[min_indent:] for line in lines]
+        dedented_code = '\n'.join(dedented_lines)
+        return dedented_code
+
+    def execute_indented_code(self, code):
+        # 获取执行上下文的缩进
+        current_indent = ' ' * (len(code) - len(code.lstrip()))
+
+        # 在代码块的每一行前添加当前缩进
+        indented_code = '\n'.join([current_indent + line for line in code.split('\n')])
+
+        # 执行代码块
+        exec(indented_code)
+
+    def str_to_code(self, string0=""):
+        '''
+        function run for string command, also include the adjustment of 'TAB'
+        to prevent error fo the operation
+
+        '''
+        # # 231114, this is just testing string for the debugging
+        # string0 = '''self.print_debug(content=f'Grace went back home now', always_print0=1)'''
+        try:
+            # string0 = str(string0)
+            # textwrap => can't be used, give up and just for record
+            # string0 = textwrap.dedent(string0)
+
+            # there seems to have error
+            string0 = self.dedent(string0)
+            exec(string0, globals(), {'self': self})
+
+            # self.execute_indented_code(string0)
+        except:
+            # 231114: watchout! don't use try-except too early
+            # or you may not see the issue
+            self.print_debug(content=f'there are some issue of exec() \n with string \n{string0}', always_print0=1)
 
         pass
     def pico_emb_main(self):
@@ -409,18 +510,40 @@ io_temp.value(io_state_lock)
             elif self.cmd_array[0] == 'en_mode' :
                 pass
             elif self.cmd_array[0] == 'grace' :
-                # engineering mode
+                # engineering mode, parameter change
                 try:
                     # for invalid data input or every error, all assign to fail
                     if self.cmd_array[0] == 'relay_dly' :
                         self.relay_dly = int(self.cmd_array[1])
-                    self.io_change(num0=self.cmd_array[1], status0=int(1))
-                    self.io_change(num0=self.cmd_array[1], status0=int(0))
-                    pass
 
+
+
+                    pass
                 except:
                     self.print_debug(f'command for engineering mode fail {self.cmd_array}')
 
+                    pass
+
+                pass
+            elif self.cmd_array[0] == 't' :
+                # testing pattern during develop
+                try:
+                    if self.cmd_array[1] == 'io' :
+                        # io toggling test
+                        self.io_change(num0=self.cmd_array[1], status0=int(1))
+                        self.io_change(num0=self.cmd_array[1], status0=int(0))
+                        pass
+                    if self.cmd_array[1] == 'p' :
+                        # pattern gen testing
+                        self.io_change(num0='8',status0=1)
+                        self.print_debug('enter pattern gen test')
+                        self.io_pulse_gen(pulse_amount0=5, pulse_type0='LOW', duration_100us=1, num0='8')
+
+                    pass
+                except:
+
+
+                    pass
 
 
         pass
