@@ -6,22 +6,38 @@ import time
 led = machine.Pin(1, machine.Pin.OUT)
 
 
-@rp2.asm_pio(set_init=rp2.PIO.OUT_LOW)
-def blink():
-    # wrap_target()
-    set(pins, 1)[0]
-    set(pins, 0)[0]
-    nop()[31]
-    nop()[31]
-    nop()[31]
-    nop()[31]
-
-    # wrap()
-
-
 def str_to_code(string0=""):
     string0 = str(string0)
     exec(string0)
+
+
+# @rp2.asm_pio(set_init=rp2.PIO.OUT_LOW)
+# def blink():
+#     # wrap_target()
+#     set(pins, 1)[0]
+#     set(pins, 0)[0]
+#     nop()[31]
+#     nop()[31]
+#     nop()[31]
+#     nop()[31]
+
+#     # wrap()
+
+cmd = """set(pins, 1)[0]
+set(pins, 0)[0]
+nop()[31]
+nop()[31]
+nop()[31]
+nop()[31]
+"""
+
+
+@rp2.asm_pio(set_init=rp2.PIO.OUT_LOW)
+def blink():
+    # wrap_target()
+    str_to_code(cmd)
+
+    # wrap()
 
 
 sm = rp2.StateMachine(0, blink, freq=10000000, set_base=Pin(0))
