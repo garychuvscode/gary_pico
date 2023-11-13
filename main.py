@@ -30,6 +30,8 @@ class pico_emb():
         # ===== input command
         self.cmd_array = []
 
+        self.str_cmd =''
+
         self.sim_mcu = sim_mcu0
 
         # ===== the only LDE on PICO, reserve for LED
@@ -65,6 +67,8 @@ class pico_emb():
         # status of the IO can be read directly from the => pin_status = pin.value()
 
         # ===== PIO pin configuration
+        # for the initialization of PIO in asm_pio => set_init=rp2.PIO.OUT_LOW
+        # OUT_LOW or OUT_HIGH can be used for default state
         self.en_ind = 6
         self.sw_ind = 7
         self.mode_index = 1
@@ -96,6 +100,11 @@ class pico_emb():
         self.relay_ref_array = { str(self.relay_ind[0]):self.relay0, str(self.relay_ind[1]):self.relay1, str(self.relay_ind[2]):self.relay2, str(self.relay_ind[3]):self.relay3,
                              str(self.relay_ind[4]):self.relay4, str(self.relay_ind[5]):self.relay5, str(self.relay_ind[6]):self.relay6, str(self.relay_ind[7]):self.relay7,
                              str(self.relay_ind[8]):self.relay8, str(self.relay_ind[9]):self.relay9}
+
+
+        # ===== engineering mode assignment and initialization
+
+        self.relay_dly = 20
 
         # reset all the LED
         self.debug_led(num0=1, value0=0, all=1)
@@ -186,12 +195,14 @@ class pico_emb():
 
         i2c;{device-XX};{register-XX};{read/write};{data-XX or length-x}
         pwm;{frequency-Hz};{duty-%};{en-0 or 1}
-        pio;
+        pio;{number- EN, SW};
+        giop;{number- 0 to 9};
         gio;{number};{status-1 or 0}
         p_mode;{1-4}
         # mode sequence: 1-4: (EN, SW) = (0, 0),  (0, 1), (1, 0), (1, 1) => default normal
         gio;8;1
 
+        note: pio 0-9 only support 100us or longer step
 
         '''
         pass
@@ -274,12 +285,20 @@ class pico_emb():
 
         pass
 
-    def relay_ctrl(self, channel_index=0):
+    def relay_ctrl(self, channel_index=0, delay0_ms=0):
         '''
-        self.relay_ref_array = [16, 17, 18, 19, 20, 21, 22, 26, 27, 28]
+        self.relay_ind = [16, 17, 18, 19, 20, 21, 22, 26, 27, 28]
         from 0 to 9 \n
         MCU IO need to be match with array setting
         '''
+        '''
+        relay control method: need to add programmable delay between switching
+        default 20, change by grace(engineering mode)
+        '''
+        if delay0_ms == 0:
+            # no input, internal delay settings
+            # self.relay_dly can't be used in the definition of function
+            delay0_ms = self.relay_dly
 
         pass
 
@@ -291,8 +310,82 @@ class pico_emb():
 
         pass
 
+    def pio_pulse_gen(self, pulse_gear_us=0.1, default_state='LOW'):
 
+        pass
 
+    def io_pulse_gen(self, pulse_amount0=1, pulse_type0='LOW', duration_100us=1, num0=''):
+        '''
+        num0 = io_ind or pio(en_ind, sw_ind), both are ok
+        by using loop to IO command generate the pulse output
+        the minimum duration is 100us (1 counter 100us)
+        => 231113 change to use different functino for gio and pio
+
+        '''
+
+        # io pin selection
+        io_temp = self.io_ref_array[num0]
+        # error command check index
+        io_state_lock = 0
+        # io_transition state
+        io_tran = 0
+        # 100us constant calibration index
+        us100_counter_cal =100
+
+        io_state0 = io_temp.value()
+
+        # io_state should be:
+        if pulse_type0 == 'LOW':
+            io_state_lock = 1
+            io_tran = 0
+        elif pulse_type0 == 'HIGH':
+            io_state_lock = 0
+            io_tran = 1
+
+        if io_state0 == io_state_lock :
+            # valid pulse request
+            # string command used as follow
+
+            self.str_cmd = 'io_temp.value(io_state_lock)'
+
+            '''
+            # string caculated example :
+            # == default
+            io_temp.value(io_state_lock)
+
+            # == pulse element
+            time.sleep_us(us100_counter_cal)
+            io_temp.value(io_tran)
+            time.sleep_us(us100_counter_cal)
+            io_temp.value(io_state_lock)
+            '''
+
+            single_pulse = '''
+time.sleep_us(us100_counter_cal)
+io_temp.value(io_tran)
+time.sleep_us(us100_counter_cal)
+io_temp.value(io_state_lock)
+'''
+
+            x_pulse = 0
+            while x_pulse < pulse_amount0 :
+
+                self.str_cmd = self.str_cmd + single_pulse
+                # maybe it's able to compare with using loop with direct command change
+                # optional [erformance comparison
+
+                x_pulse = x_pulse + 1
+                pass
+
+        else:
+            # invalid pulse request
+            self.print_debug(f'invalid pulse request for pin: {num0}, default state: {io_state0} with {pulse_type0} pulse request')
+
+        exec(self.str_cmd)
+
+        self.print_debug(f'pulse finished with: \n {self.str_cmd} \n, is the correct Grace? ')
+
+        pass
     def pico_emb_main(self):
         '''
         pico main program
@@ -316,9 +409,17 @@ class pico_emb():
             elif self.cmd_array[0] == 'en_mode' :
                 pass
             elif self.cmd_array[0] == 'grace' :
-                self.io_change(num0=self.cmd_array[1], status0=int(1))
-                self.io_change(num0=self.cmd_array[1], status0=int(0))
-                pass
+                # engineering mode
+                try:
+                    # for invalid data input or every error, all assign to fail
+                    if self.cmd_array[0] == 'relay_dly' :
+                        self.relay_dly = int(self.cmd_array[1])
+                    self.io_change(num0=self.cmd_array[1], status0=int(1))
+                    self.io_change(num0=self.cmd_array[1], status0=int(0))
+                    pass
+
+                except:
+                    self.print_debug(f'command for engineering mode fail {self.cmd_array}')
 
 
 
