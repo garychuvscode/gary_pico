@@ -27,41 +27,84 @@ class pico_emb():
 
     def __init__(self, sim_mcu0=0):
 
-        # input command
+        # ===== input command
         self.cmd_array = []
 
-        self.sim_mcu = sim_mcu0
-        self.baud_r_com = 9600
+        self.str_cmd =''
 
+        self.sim_mcu = sim_mcu0
+
+        # ===== the only LDE on PICO, reserve for LED
         self.led = machine.Pin(25, machine.Pin.OUT)
+
+        # ===== UART- debug bus settings
+        self.baud_r_com = 9600
         self.uart1 = machine.UART(1, baudrate=self.baud_r_com, tx=Pin(4), rx=Pin(5))  # 替换Pin(4)和Pin(5)为实际的引脚
 
-        # PWM settings
-        pwm0 = machine.PWM(Pin(0), freq=2000, duty_u16=32768)
-
-        # debug led settings
+        # ===== debug led settings (don't use after model test finished)
         self.led1 = machine.Pin(1, machine.Pin.OUT)
         self.led2 = machine.Pin(9, machine.Pin.OUT)
         self.led3 = machine.Pin(13, machine.Pin.OUT)
         self.led4 = machine.Pin(18, machine.Pin.OUT)
         self.led5 = machine.Pin(22, machine.Pin.OUT)
 
-
-        self.io_8 = machine.Pin(8, machine.Pin.OUT)
-        self.io_9 = machine.Pin(9, machine.Pin.OUT)
-        self.io_10 = machine.Pin(10, machine.Pin.OUT)
-        self.io_11 = machine.Pin(11, machine.Pin.OUT)
-        self.io_12 = machine.Pin(12, machine.Pin.OUT)
-        self.io_13 = machine.Pin(13, machine.Pin.OUT)
-
-
+        # ===== general IO pin configuration
+        # the name of self.io_x doesn't , name will change with array
+        # and the mapping setting should be correct
+        # only change the mapped definition and call the correct pin from host
+        self.io_ind = [8, 9, 10, 11, 12, 13]
+        self.io_8 = machine.Pin(self.io_ind[0], machine.Pin.OUT)
+        self.io_9 = machine.Pin(self.io_ind[1], machine.Pin.OUT)
+        self.io_10 = machine.Pin(self.io_ind[2], machine.Pin.OUT)
+        self.io_11 = machine.Pin(self.io_ind[3], machine.Pin.OUT)
+        self.io_12 = machine.Pin(self.io_ind[4], machine.Pin.OUT)
+        self.io_13 = machine.Pin(self.io_ind[5], machine.Pin.OUT)
         # IO reference define: name(GPIO number):IO_object
-        self.io_ref_array = { '8':self.io_8, '9':self.io_9, '10':self.io_10, '11':self.io_11, '12':self.io_12, '13':self.io_13}
-        # relay array, need to have sequence define in source code
-        self.relay_ref_array = []
-        # status of the IO can be read directly from the => pin_status = pin.value()
+        self.io_ref_array = { str(self.io_ind[0]):self.io_8, str(self.io_ind[1]):self.io_9, str(self.io_ind[2]):self.io_10,
+                             str(self.io_ind[3]):self.io_11, str(self.io_ind[4]):self.io_12, str(self.io_ind[5]):self.io_13}
         # the value function without input will return the result
         # self.io_status_array = { '8':0, '9':0, '10':0, '11':0, '12':0, '13':0}
+        # status of the IO can be read directly from the => pin_status = pin.value()
+
+        # ===== PIO pin configuration
+        # for the initialization of PIO in asm_pio => set_init=rp2.PIO.OUT_LOW
+        # OUT_LOW or OUT_HIGH can be used for default state
+        self.en_ind = 6
+        self.sw_ind = 7
+        self.mode_index = 1
+        self.en_pin = machine.Pin(self.en_ind, machine.Pin.OUT)
+        self.sw_pin = machine.Pin(self.sw_ind, machine.Pin.OUT)
+
+        # ===== PWM default configuration
+        # manual will be PICO obj or PWM object in PICO side
+        self.pwm0 = machine.PWM(Pin(0), freq=25000000, duty_u16=32765)
+        self.pwm1 = machine.PWM(Pin(0), freq=25000000, duty_u16=32765)
+
+        # ===== I2C Bus configuration
+
+        # ===== relay control configuration
+        # relay array, need to have sequence define in source code
+        self.relay_ind = [16, 17, 18, 19, 20, 21, 22, 26, 27, 28]
+        # status of the IO can be read directly from the => pin_status = pin.value()
+        self.relay0 = machine.Pin(self.relay_ind[0], machine.Pin.OUT)
+        self.relay1 = machine.Pin(self.relay_ind[1], machine.Pin.OUT)
+        self.relay2 = machine.Pin(self.relay_ind[2], machine.Pin.OUT)
+        self.relay3 = machine.Pin(self.relay_ind[3], machine.Pin.OUT)
+        self.relay4 = machine.Pin(self.relay_ind[4], machine.Pin.OUT)
+        self.relay5 = machine.Pin(self.relay_ind[5], machine.Pin.OUT)
+        self.relay6 = machine.Pin(self.relay_ind[6], machine.Pin.OUT)
+        self.relay7 = machine.Pin(self.relay_ind[7], machine.Pin.OUT)
+        self.relay8 = machine.Pin(self.relay_ind[8], machine.Pin.OUT)
+        self.relay9 = machine.Pin(self.relay_ind[9], machine.Pin.OUT)
+        # IO reference define: name(GPIO number):IO_object
+        self.relay_ref_array = { str(self.relay_ind[0]):self.relay0, str(self.relay_ind[1]):self.relay1, str(self.relay_ind[2]):self.relay2, str(self.relay_ind[3]):self.relay3,
+                             str(self.relay_ind[4]):self.relay4, str(self.relay_ind[5]):self.relay5, str(self.relay_ind[6]):self.relay6, str(self.relay_ind[7]):self.relay7,
+                             str(self.relay_ind[8]):self.relay8, str(self.relay_ind[9]):self.relay9}
+
+
+        # ===== engineering mode assignment and initialization
+
+        self.relay_dly = 20
 
         # reset all the LED
         self.debug_led(num0=1, value0=0, all=1)
@@ -137,9 +180,9 @@ class pico_emb():
         self.print_debug(f'input cmd is :{cmd_in_raw}')
         self.led_toggle()
 
-        # split command with '.'
-        self.cmd_array = cmd_in_raw.split('.')
-        self.print_debug(f'split cmd is :{self.cmd_array}')
+        # split command with ';'
+        self.cmd_array = cmd_in_raw.split(';')
+        self.print_debug(f'split cmd is : {self.cmd_array}')
         self.print_debug(f'mode: {self.cmd_array[0]}')
 
         # print the command out
@@ -150,14 +193,16 @@ class pico_emb():
         '''
         deifnition of command
 
-        i2c.{device;XX}.{register;XX}.{read/write}.{data;XX or length;x}
-        pwm.{frequency;Hz}.{duty;%}.{en;0 or 1}
-        pio.
-        gio.{number}.{status;1 or 0}
-        p_mode.{1-4}
+        i2c;{device-XX};{register-XX};{read/write};{data-XX or length-x}
+        pwm;{frequency-Hz};{duty-%};{en-0 or 1}
+        pio;{number- EN, SW};
+        giop;{number- 0 to 9};
+        gio;{number};{status-1 or 0}
+        p_mode;{1-4}
         # mode sequence: 1-4: (EN, SW) = (0, 0),  (0, 1), (1, 0), (1, 1) => default normal
-        gio.8.1
+        gio;8;1
 
+        note: pio 0-9 only support 100us or longer step
 
         '''
         pass
@@ -187,9 +232,10 @@ class pico_emb():
 
         pass
 
-    def io_reset(self):
+    def io_reset(self, pio_reset=0):
         '''
         set all to 0
+        just general IO, no PIO
         '''
 
         x_c = len(self.io_ref_array)
@@ -201,8 +247,145 @@ class pico_emb():
             pass
 
         self.print_debug(f'io_reset done')
+
+        if pio_reset == 1:
+            # PIO also reset, reset to all 0
+            self.pmic_mode(1)
+
         pass
 
+    def pmic_mode(self, mode_index=4):
+        '''
+        (EN,SW) or (EN2, EN1) \n
+        1:(0,0); 2:(0,1); 3:(1,0); 4:(1,1)
+        GP6: EN (EN2)
+        GP7: SW (EN1)
+        '''
+        # normal condition is IO, both IO and pulse IO are ok
+        self.mode_index = mode_index
+        if self.mode_index == 1:
+            self.io_change(num0=str(self.en_ind), status0=0)
+            self.io_change(num0=str(self.sw_ind), status0=0)
+            pass
+        elif self.mode_index == 2:
+            self.io_change(num0=str(self.en_ind), status0=0)
+            self.io_change(num0=str(self.sw_ind), status0=1)
+            pass
+        elif self.mode_index == 3:
+            self.io_change(num0=str(self.en_ind), status0=1)
+            self.io_change(num0=str(self.sw_ind), status0=0)
+            pass
+        elif self.mode_index == 4:
+            self.io_change(num0=str(self.en_ind), status0=1)
+            self.io_change(num0=str(self.sw_ind), status0=1)
+            pass
+        else:
+            self.print_debug(f'command :{mode_index} is invalid, no action')
+            pass
+
+        pass
+
+    def relay_ctrl(self, channel_index=0, delay0_ms=0):
+        '''
+        self.relay_ind = [16, 17, 18, 19, 20, 21, 22, 26, 27, 28]
+        from 0 to 9 \n
+        MCU IO need to be match with array setting
+        '''
+        '''
+        relay control method: need to add programmable delay between switching
+        default 20, change by grace(engineering mode)
+        '''
+        if delay0_ms == 0:
+            # no input, internal delay settings
+            # self.relay_dly can't be used in the definition of function
+            delay0_ms = self.relay_dly
+
+        pass
+
+    def ezcommand(self, command0):
+        '''
+        same operation with JIGM3, transfer code to string,
+        need to prevent reserve words conflict
+        '''
+
+        pass
+
+    def pio_pulse_gen(self, pulse_gear_us=0.1, default_state='LOW'):
+
+        pass
+
+    def io_pulse_gen(self, pulse_amount0=1, pulse_type0='LOW', duration_100us=1, num0=''):
+        '''
+        num0 = io_ind or pio(en_ind, sw_ind), both are ok
+        by using loop to IO command generate the pulse output
+        the minimum duration is 100us (1 counter 100us)
+        => 231113 change to use different functino for gio and pio
+
+        '''
+
+        # io pin selection
+        io_temp = self.io_ref_array[num0]
+        # error command check index
+        io_state_lock = 0
+        # io_transition state
+        io_tran = 0
+        # 100us constant calibration index
+        us100_counter_cal =100
+
+        io_state0 = io_temp.value()
+
+        # io_state should be:
+        if pulse_type0 == 'LOW':
+            io_state_lock = 1
+            io_tran = 0
+        elif pulse_type0 == 'HIGH':
+            io_state_lock = 0
+            io_tran = 1
+
+        if io_state0 == io_state_lock :
+            # valid pulse request
+            # string command used as follow
+
+            self.str_cmd = 'io_temp.value(io_state_lock)'
+
+            '''
+            # string caculated example :
+            # == default
+            io_temp.value(io_state_lock)
+
+            # == pulse element
+            time.sleep_us(us100_counter_cal)
+            io_temp.value(io_tran)
+            time.sleep_us(us100_counter_cal)
+            io_temp.value(io_state_lock)
+            '''
+
+            single_pulse = '''
+time.sleep_us(us100_counter_cal)
+io_temp.value(io_tran)
+time.sleep_us(us100_counter_cal)
+io_temp.value(io_state_lock)
+'''
+
+            x_pulse = 0
+            while x_pulse < pulse_amount0 :
+
+                self.str_cmd = self.str_cmd + single_pulse
+                # maybe it's able to compare with using loop with direct command change
+                # optional [erformance comparison
+
+                x_pulse = x_pulse + 1
+                pass
+
+        else:
+            # invalid pulse request
+            self.print_debug(f'invalid pulse request for pin: {num0}, default state: {io_state0} with {pulse_type0} pulse request')
+
+        exec(self.str_cmd)
+
+        self.print_debug(f'pulse finished with: \n {self.str_cmd} \n, is the correct Grace? ')
+
+        pass
     def pico_emb_main(self):
         '''
         pico main program
@@ -226,9 +409,17 @@ class pico_emb():
             elif self.cmd_array[0] == 'en_mode' :
                 pass
             elif self.cmd_array[0] == 'grace' :
-                self.io_change(num0=self.cmd_array[1], status0=int(1))
-                self.io_change(num0=self.cmd_array[1], status0=int(0))
-                pass
+                # engineering mode
+                try:
+                    # for invalid data input or every error, all assign to fail
+                    if self.cmd_array[0] == 'relay_dly' :
+                        self.relay_dly = int(self.cmd_array[1])
+                    self.io_change(num0=self.cmd_array[1], status0=int(1))
+                    self.io_change(num0=self.cmd_array[1], status0=int(0))
+                    pass
+
+                except:
+                    self.print_debug(f'command for engineering mode fail {self.cmd_array}')
 
 
 

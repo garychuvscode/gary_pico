@@ -8,7 +8,7 @@ class test_obj:
     def __init__(self):
         # Define the LED pin
         self.led = machine.Pin(25, machine.Pin.OUT)
-        self.gpio_0 = machine.Pin(0, machine.Pin.OUT)
+        self.gpio_0 = machine.Pin(8, machine.Pin.OUT)
 
         pass
 
