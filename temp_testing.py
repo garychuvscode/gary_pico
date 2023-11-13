@@ -40,11 +40,6 @@ def blink():
     # wrap()
 
 
-def str_to_code(string0=""):
-    string0 = str(string0)
-    exec(string0)
-
-
 """
 pattern gen need:
 1. pulse out => high or low (glitch testing)
