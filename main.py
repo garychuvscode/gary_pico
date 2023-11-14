@@ -24,7 +24,8 @@ f_now = machine.freq()
 
 # 0 is simulation mode (work with teriminal, or USB COM),
 # 1 is real mode (use real interface read and write)
-sim_mode = 1
+# 2 is real debug mode, need to check termainal print
+sim_mode = 2
 
 class pico_emb():
 
@@ -171,10 +172,12 @@ class pico_emb():
         '''
         replace the original print function to another debug bus
         '''
-        if self.sim_mcu == 1 and always_print0 == 1:
+        if self.sim_mcu >= 1 and always_print0 == 1:
             # real mode change output to the debug bus
             self.uart1.write(content)
-            print(content)
+            if self.sim_mcu == 2 :
+                # pico connect and need to check termainal
+                print(content)
         elif self.sim_mcu == 0:
             print(content)
             pass
@@ -222,15 +225,28 @@ class pico_emb():
         read different length
         '''
         # 发送要读取的寄存器地址
+
         self.i2c.writeto(device, bytes([regaddr]))
+        self.print_debug(content=f'reg_addr= {regaddr}, and byte {bytes([regaddr])}', always_print0=1)
         # 从I2C设备读取数据
         data_bytes = self.i2c.readfrom(device, len)  # 4表示要读取的字节数
 
         numeric_list = [byte for byte in data_bytes]
+        self.print_debug(content=f'data read= {data_bytes}, and output {numeric_list}', always_print0=1)
 
+        # print to pico termainal, being read from PC
+        print(numeric_list)
         return numeric_list
 
     def i2c_write(self, device=0, regaddr=0, datas=0):
+        '''
+        write different length
+        '''
+
+        self.print_debug(content=f'regaddr = {regaddr}, no need to change', always_print0=1)
+        n_datas = bytes([datas])
+        self.print_debug(content=f'data_in = {datas}, and SDA_out {n_datas}', always_print0=1)
+        self.i2c.writeto_mem(device, regaddr, n_datas)
 
         pass
 
@@ -241,7 +257,7 @@ class pico_emb():
         minimum toggle time without print, "within 100us"
         '''
         num0 = str(num0)
-        if self.sim_mcu == 1:
+        if self.sim_mcu >= 1:
             if status0 == 1 or status0 == 0 :
                 self.io_ref_array[num0].value(status0)
             # 231109 there are IO delay concern for minimum toggling time in this function
@@ -355,8 +371,9 @@ class pico_emb():
         # 100us constant calibration index
         self.us100_counter_cal =100
 
-        self.io_state0 = self.io_temp.value()
-        if self.sim_mcu == 0 :
+        if self.sim_mcu == 1 :
+            self.io_state0 = self.io_temp.value()
+        else :
             # example is low pulse
             self.io_state0 = 1
 
@@ -409,7 +426,7 @@ self.io_temp.value(self.io_state_lock)
             # invalid pulse request
             self.print_debug(f'invalid pulse request for pin: {num0}, default state: {self.io_state0} with {pulse_type0} pulse request', always_print0=1)
 
-        if self.sim_mcu == 1:
+        if self.sim_mcu >= 1:
             # this is micropython command which causing crash during sim mode
             # exec(self.str_cmd)
             self.str_to_code(string0=self.str_cmd)
@@ -509,6 +526,7 @@ self.io_temp.value(self.io_state_lock)
             # or you may not see the issue
             self.print_debug(content=f'there are some issue of exec() \n with string \n{string0}', always_print0=1)
         pass
+
     def universal_command(self, cmd0):
         '''
         accept different command during operation for flexible adjustment of
@@ -556,18 +574,29 @@ self.io_temp.value(self.io_state_lock)
 
                 pass
             elif self.cmd_array[0] == 't' :
-                # testing pattern during develop
+                # testing pattern during development status
                 try:
                     if self.cmd_array[1] == 'io' :
                         # io toggling test
+                        # 231110 done
                         self.io_change(num0=self.cmd_array[1], status0=int(1))
                         self.io_change(num0=self.cmd_array[1], status0=int(0))
                         pass
                     if self.cmd_array[1] == 'p' :
                         # pattern gen testing
+                        # 231115 wait for scope check for calibration
                         self.io_change(num0='8',status0=1)
                         self.print_debug('enter pattern gen test')
                         self.io_pulse_gen(pulse_amount0=5, pulse_type0='LOW', duration_100us=1, num0='8')
+                        pass
+                    if self.cmd_array[1] == 'i' :
+                        # i2c mode
+                        # 231115 wait for real test
+                        self.i2c_write(device=0x4E, regaddr=0xA3, datas=183)
+                        x = self.i2c_read(device=0x4E, regaddr=0xA3, len=1)
+                        self.print_debug(str(x))
+                        pass
+
 
                     pass
                 except Exception as e:
