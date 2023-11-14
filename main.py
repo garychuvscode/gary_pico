@@ -88,6 +88,8 @@ class pico_emb():
         self.pwm1 = machine.PWM(Pin(0), freq=25000000, duty_u16=32765)
 
         # ===== I2C Bus configuration
+        self.i2c = machine.I2C(0, sda=machine.Pin(0), scl=machine.Pin(1), freq=400000)
+
 
         # ===== relay control configuration
         # relay array, need to have sequence define in source code
@@ -216,8 +218,17 @@ class pico_emb():
         pass
 
     def i2c_read(self, device=0, regaddr=0, len=1):
+        '''
+        read different length
+        '''
+        # 发送要读取的寄存器地址
+        self.i2c.writeto(device, bytes([regaddr]))
+        # 从I2C设备读取数据
+        data_bytes = self.i2c.readfrom(device, len)  # 4表示要读取的字节数
 
-        pass
+        numeric_list = [byte for byte in data_bytes]
+
+        return numeric_list
 
     def i2c_write(self, device=0, regaddr=0, datas=0):
 
@@ -336,49 +347,49 @@ class pico_emb():
         '''
 
         # io pin selection
-        io_temp = self.io_ref_array[num0]
+        self.io_temp = self.io_ref_array[num0]
         # error command check index
-        io_state_lock = 0
+        self.io_state_lock = 0
         # io_transition state
-        io_tran = 0
+        self.io_tran = 0
         # 100us constant calibration index
-        us100_counter_cal =100
+        self.us100_counter_cal =100
 
-        io_state0 = io_temp.value()
+        self.io_state0 = self.io_temp.value()
         if self.sim_mcu == 0 :
             # example is low pulse
-            io_state0 = 1
+            self.io_state0 = 1
 
         # io_state should be:
         if pulse_type0 == 'LOW':
-            io_state_lock = 1
-            io_tran = 0
+            self.io_state_lock = 1
+            self.io_tran = 0
         elif pulse_type0 == 'HIGH':
-            io_state_lock = 0
-            io_tran = 1
+            self.io_state_lock = 0
+            self.io_tran = 1
 
-        if io_state0 == io_state_lock :
+        if self.io_state0 == self.io_state_lock :
             # valid pulse request
             # string command used as follow
 
-            self.str_cmd = '''io_temp.value(io_state_lock)\n'''
+            self.str_cmd = '''self.io_temp.value(self.io_state_lock)\n'''
 
             '''
             # string caculated example :
             # == default
-            io_temp.value(io_state_lock)
+            self.io_temp.value(self.io_state_lock)
 
             # == pulse element
-            time.sleep_us(us100_counter_cal)
-            io_temp.value(io_tran)
-            time.sleep_us(us100_counter_cal)
-            io_temp.value(io_state_lock)
+            time.sleep_us(self.us100_counter_cal)
+            self.io_temp.value(self.io_tran)
+            time.sleep_us(self.us100_counter_cal)
+            self.io_temp.value(self.io_state_lock)
             '''
 
-            single_pulse = '''time.sleep_us(us100_counter_cal)
-io_temp.value(io_tran)
-time.sleep_us(us100_counter_cal)
-io_temp.value(io_state_lock)
+            single_pulse = '''time.sleep_us(self.us100_counter_cal)
+self.io_temp.value(self.io_tran)
+time.sleep_us(self.us100_counter_cal)
+self.io_temp.value(self.io_state_lock)
 '''
             self.print_debug(f'the single pulse command is {single_pulse}')
             x_pulse = 0
@@ -396,14 +407,14 @@ io_temp.value(io_state_lock)
 
         else:
             # invalid pulse request
-            self.print_debug(f'invalid pulse request for pin: {num0}, default state: {io_state0} with {pulse_type0} pulse request')
+            self.print_debug(f'invalid pulse request for pin: {num0}, default state: {self.io_state0} with {pulse_type0} pulse request', always_print0=1)
 
         if self.sim_mcu == 1:
             # this is micropython command which causing crash during sim mode
             # exec(self.str_cmd)
             self.str_to_code(string0=self.str_cmd)
 
-        self.print_debug(f'pulse finished with: \n{self.str_cmd} \n, is this correct Grace? ',always_print0=1)
+        self.print_debug(f'pulse finished with: \n{self.str_cmd} \n, hey cute Grace, is this correct?~ ? ',always_print0=1)
 
         pass
 
@@ -454,16 +465,21 @@ io_temp.value(io_state_lock)
         return dedented_code
 
     def execute_indented_code(self, code):
+        '''
+        check previous format as adjustment reference
+        input the code in string and return the modify result
+        '''
         # 获取执行上下文的缩进
         current_indent = ' ' * (len(code) - len(code.lstrip()))
 
         # 在代码块的每一行前添加当前缩进
         indented_code = '\n'.join([current_indent + line for line in code.split('\n')])
 
-        # 执行代码块
-        exec(indented_code)
+        # not to exute here, operate all the excution in 'str_to_code'
+        # # 执行代码块
+        # exec(indented_code)
 
-    def str_to_code(self, string0=""):
+    def str_to_code(self, string0="", *args, **kwargs ):
         '''
         function run for string command, also include the adjustment of 'TAB'
         to prevent error fo the operation
@@ -471,6 +487,12 @@ io_temp.value(io_state_lock)
         '''
         # # 231114, this is just testing string for the debugging
         # string0 = '''self.print_debug(content=f'Grace went back home now', always_print0=1)'''
+
+        # 231114: add the reference dictionary to the exec function
+        self.str_code_ref = {'self': self}
+        # merge the self object with kwargs for cute Grace
+        self.str_code_ref.update(kwargs)
+
         try:
             # string0 = str(string0)
             # textwrap => can't be used, give up and just for record
@@ -478,15 +500,22 @@ io_temp.value(io_state_lock)
 
             # there seems to have error
             string0 = self.dedent(string0)
-            exec(string0, globals(), {'self': self})
+            exec(string0, globals(), self.str_code_ref)
 
             # self.execute_indented_code(string0)
-        except:
+        except Exception as e:
+            self.print_debug(f'exception: {e}', always_print0=1)
             # 231114: watchout! don't use try-except too early
             # or you may not see the issue
             self.print_debug(content=f'there are some issue of exec() \n with string \n{string0}', always_print0=1)
-
         pass
+    def universal_command(self, cmd0):
+        '''
+        accept different command during operation for flexible adjustment of
+        program flow, or used to add new interrupt during operation
+        '''
+        pass
+
     def pico_emb_main(self):
         '''
         pico main program
@@ -519,7 +548,8 @@ io_temp.value(io_state_lock)
 
 
                     pass
-                except:
+                except Exception as e:
+                    self.print_debug(f'exception: {e}', always_print0=1)
                     self.print_debug(f'command for engineering mode fail {self.cmd_array}')
 
                     pass
@@ -540,13 +570,21 @@ io_temp.value(io_state_lock)
                         self.io_pulse_gen(pulse_amount0=5, pulse_type0='LOW', duration_100us=1, num0='8')
 
                     pass
-                except:
+                except Exception as e:
+                    self.print_debug(f'exception: {e}', always_print0=1)
 
 
                     pass
 
+                pass
+            elif self.cmd_array[0] == 'u' :
+                # universal command
 
-        pass
+
+                pass
+
+            # end pico main while
+            pass
 
 
 pico_grace= pico_emb(sim_mcu0=sim_mode)

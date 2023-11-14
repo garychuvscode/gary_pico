@@ -4,7 +4,8 @@ import machine
 i2c = machine.I2C(0, sda=machine.Pin(0), scl=machine.Pin(1))
 
 # I2C设备地址（请根据您的设备地址进行配置）
-device_address = 0x50
+# control example => 7'h4E = 0x9C
+device_address = 0x4E
 """
 this is 7 bit address, 0x50 => b01010000
 => change to 8 bit address is b10100000 -> 0xA0
