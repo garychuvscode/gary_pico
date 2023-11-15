@@ -91,6 +91,13 @@ class pico_emb():
         # ===== I2C Bus configuration
         self.i2c = machine.I2C(0, sda=machine.Pin(0), scl=machine.Pin(1), freq=400000)
 
+        # 230920 add I2C bit write function
+
+        self.bit_clr = {"0": 0xFE, "1": 0xFD, "2": 0xFB, "3": 0xF7,
+                        "4": 0xEF, "5": 0xDF, "6": 0xBF, "7": 0x7F,}
+
+        self.bit_set = { "0": 0x1, "1": 0x2, "2": 0x4, "3": 0x8,
+                        "4": 0x10, "5": 0x20, "6": 0x40, "7": 0x80,}
 
         # ===== relay control configuration
         # relay array, need to have sequence define in source code
@@ -232,7 +239,8 @@ class pico_emb():
         data_bytes = self.i2c.readfrom(device, len)  # 4表示要读取的字节数
 
         numeric_list = [byte for byte in data_bytes]
-        self.print_debug(content=f'data read= {data_bytes}, and output {numeric_list}', always_print0=1)
+        hex_array = [hex(x)[2:] for x in numeric_list]
+        self.print_debug(content=f'data read= {data_bytes}, hex is: {hex_array} and output {numeric_list}', always_print0=1)
 
         # print to pico termainal, being read from PC
         print(numeric_list)
@@ -245,7 +253,7 @@ class pico_emb():
 
         self.print_debug(content=f'regaddr = {regaddr}, no need to change', always_print0=1)
         n_datas = bytes([datas])
-        self.print_debug(content=f'data_in = {datas}, and SDA_out {n_datas}', always_print0=1)
+        self.print_debug(content=f'data_in = {datas}, hex: {hex(datas)} and SDA_out {n_datas}', always_print0=1)
         self.i2c.writeto_mem(device, regaddr, n_datas)
 
         pass
@@ -346,6 +354,54 @@ class pico_emb():
         same operation with JIGM3, transfer code to string,
         need to prevent reserve words conflict
         '''
+
+        pass
+
+    def bit_s(self, bit_num0=0, byte_state_tmp0=0):
+        bit_num0 = str(bit_num0)
+
+        # bit set process
+        bit_cmd0 = self.bit_set[bit_num0]
+        self.print_debug(f"set bit_cmd0 is {bit_cmd0}")
+        new_byte_data = byte_state_tmp0 | bit_cmd0
+        self.print_debug(f"final command0 is {new_byte_data}, g")
+
+        return new_byte_data
+
+    def bit_c(self, bit_num0=0, byte_state_tmp0=0):
+        bit_num0 = str(bit_num0)
+
+        # bit clear process
+        bit_cmd0 = self.bit_clr[bit_num0]
+        self.print_debug(f"clear bit_cmd0 is {bit_cmd0}")
+        new_byte_data = byte_state_tmp0 & bit_cmd0
+        self.print_debug(f"final command0 is {new_byte_data}, g")
+
+        return new_byte_data
+
+    def hex_to_num(self, data_in0=''):
+        '''
+        try to transfer the input to number for register write
+        skip if already number (but watch out this is dec number input, not hex)
+        '''
+        try:
+            data_in0 = int(data_in0, 16)
+            self.print_debug(f'input is string and transfer number: {data_in0}')
+        except:
+            self.print_debug(f'input is already number: {data_in0}, return origin')
+
+        return data_in0
+
+    def num_to_hex (self, data_in0=0):
+        '''
+        transfer the number to hex
+        '''
+        try:
+            data_in0 = hex(data_in0)
+            return data_in0
+        except:
+            self.print_debug(f'input data "{data_in0}" transfer error, double check input data')
+            return 'data_error'
 
         pass
 
