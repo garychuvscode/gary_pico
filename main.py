@@ -85,13 +85,19 @@ class pico_emb():
 
         # ===== PWM default configuration
         # manual will be PICO obj or PWM object in PICO side
-        self.pwm0 = machine.PWM(Pin(0), freq=25000000, duty_u16=32765)
-        self.pwm1 = machine.PWM(Pin(0), freq=25000000, duty_u16=32765)
+        self.freq_set = 1000000
+        self.pwm_scaling = 100
+        self.pwm0_pin = 2
+        self.pwm1_pin = 3
+        # duty 0 is default low
+        self.pwm0 = machine.PWM(Pin(self.pwm0_pin), freq=self.freq_set, duty_u16=0)
+        self.pwm1 = machine.PWM(Pin(self.pwm1_pin), freq=self.freq_set, duty_u16=0)
 
         # ===== I2C Bus configuration
         self.i2c = machine.I2C(0, sda=machine.Pin(0), scl=machine.Pin(1), freq=400000)
 
         # 230920 add I2C bit write function
+        # 231117: this can be put at the PICO_obj (python side, not micropython side)
 
         self.bit_clr = {"0": 0xFE, "1": 0xFD, "2": 0xFB, "3": 0xF7,
                         "4": 0xEF, "5": 0xDF, "6": 0xBF, "7": 0x7F,}
@@ -121,7 +127,10 @@ class pico_emb():
 
         # ===== engineering mode assignment and initialization
 
-        self.relay_dly = 20
+        # 231116 to map with JIGM3, need to use s
+        # only micropython have sleep_us, ms, not use in general input
+        # only for micropython operation
+        self.relay_dly = 0.02
 
         # reset all the LED
         self.debug_led(num0=1, value0=0, all=1)
@@ -279,16 +288,22 @@ class pico_emb():
 
         pass
 
-    def io_reset(self, pio_reset=0):
+    def io_reset(self, ind_arry0= None, pio_reset=0):
         '''
         set all to 0
         just general IO, no PIO
         '''
+        if ind_arry0 == None:
+            # reset the relay related io pin
+            ind_arry0 = self.relay_ref_array
+        else:
+            # send the io index array for reset
+            ind_arry0 = self.io_ref_array
 
-        x_c = len(self.io_ref_array)
+        x_c = len(ind_arry0)
         x = 0
         while x < x_c :
-            temp_io = list(self.io_ref_array.values())[0]
+            temp_io = list(ind_arry0.values())[0]
             temp_io.value(0)
             x = x + 1
             pass
@@ -332,7 +347,7 @@ class pico_emb():
 
         pass
 
-    def relay_ctrl(self, channel_index=0, delay0_ms=0):
+    def relay_ctrl(self, channel_index=0, t_dly_s=0):
         '''
         self.relay_ind = [16, 17, 18, 19, 20, 21, 22, 26, 27, 28]
         from 0 to 9 \n
@@ -342,10 +357,20 @@ class pico_emb():
         relay control method: need to add programmable delay between switching
         default 20, change by grace(engineering mode)
         '''
-        if delay0_ms == 0:
+        if t_dly_s == 0:
             # no input, internal delay settings
             # self.relay_dly can't be used in the definition of function
-            delay0_ms = self.relay_dly
+            t_dly_s = self.relay_dly
+        else:
+            # pass, use input setting
+            pass
+
+        # reset all relay channel
+        self.io_reset()
+        time.sleep(t_dly_s)
+
+        # open new relaly channel
+        self.relay_ref_array[str(self.relay_ind[channel_index])].value(1)
 
         pass
 
@@ -356,6 +381,11 @@ class pico_emb():
         '''
 
         pass
+
+    """
+    # 231117: remember that some code can be put at the python side
+    # JIGM3 is the python side of MCU interface, we are only target
+    # GPLV4 not to cover all function in JIGM3 => it shuld be PICO_obj
 
     def bit_s(self, bit_num0=0, byte_state_tmp0=0):
         bit_num0 = str(bit_num0)
@@ -404,6 +434,8 @@ class pico_emb():
             return 'data_error'
 
         pass
+
+    """
 
     def pio_pulse_gen(self, pulse_gear_us=0.1, default_state='LOW'):
 
@@ -491,6 +523,50 @@ self.io_temp.value(self.io_state_lock)
 
         pass
 
+    def pwm_ctrl(self, freq0=None, duty0=0, type0=0, ch0=0):
+        """
+        duty is either % or duration_ns, depends on type
+        type: 0- duty in %, 1- duration_ns
+        if no freq setting, freq set to default
+        set duty to 0 to disable
+        100 is default freq scaling, freq_final = scaling*freq0, default 1MHz
+        """
+
+        if freq0 == None:
+            # use default setting for frequency
+            freq0 = self.freq_set
+        else:
+            freq0 = int(freq0)*self.pwm_scaling
+
+        if type0 == 0:
+            # duty in %
+            duty_nor = float(duty0) / 100
+            duty_res = int(duty_nor * 65535)
+            pass
+        else:
+            # duty in ns, no need for process
+            duty_res = int(duty0)
+            pass
+
+        if ch0 == 0:
+            # active pwm0
+            if type0 == 0:
+                # % mode
+                pwm0 = machine.PWM(Pin(self.pwm0_pin), freq=freq0, duty_u16=duty_res)
+            else:
+                # ns mode
+                pwm0 = machine.PWM(Pin(self.pwm0_pin), freq=freq0, duty_ns=duty_res)
+        elif ch0 == 1:
+            # active pwm0
+            if type0 == 0:
+                # % mode
+                pwm1 = machine.PWM(Pin(self.pwm1_pin), freq=freq0, duty_u16=duty_res)
+            else:
+                # ns mode
+                pwm1 = machine.PWM(Pin(self.pwm1_pin), freq=freq0, duty_ns=duty_res)
+
+        pass
+
     def sim_assign(self, *args, **kwargs):
         '''
         the simulation mode input with different amount of variable input
@@ -556,7 +632,6 @@ self.io_temp.value(self.io_state_lock)
         '''
         function run for string command, also include the adjustment of 'TAB'
         to prevent error fo the operation
-
         '''
         # # 231114, this is just testing string for the debugging
         # string0 = '''self.print_debug(content=f'Grace went back home now', always_print0=1)'''
@@ -590,6 +665,12 @@ self.io_temp.value(self.io_state_lock)
         '''
         pass
 
+    # # 231117 this function have operation limitation, move to pico_obj at python side
+    # # PICO @ micropython can only have i2c read and write, receive the finished command
+    # # python side program capability is better, no need to be put at micropython
+    # def pure_group_write(self, lsb0=0, len0=1, data0=0, byte_state_tmp0=0):
+    #     pass
+
     def pico_emb_main(self):
         '''
         pico main program
@@ -616,8 +697,13 @@ self.io_temp.value(self.io_state_lock)
                 # engineering mode, parameter change
                 try:
                     # for invalid data input or every error, all assign to fail
-                    if self.cmd_array[0] == 'relay_dly' :
-                        self.relay_dly = int(self.cmd_array[1])
+                    if self.cmd_array[1] == 'relay_dly' :
+                        # change relay delay time
+                        self.relay_dly = int(self.cmd_array[2])
+                    if self.cmd_array[1] == 'pwm_scale' :
+                        # change pwm scaling factor
+                        self.pwm_scaling = int(self.cmd_array[2])
+
 
 
 
@@ -652,11 +738,17 @@ self.io_temp.value(self.io_state_lock)
                         x = self.i2c_read(device=0x4E, regaddr=0xA3, len=1)
                         self.print_debug(str(x))
                         pass
+                    if self.cmd_array[1] == 'pw' :
+                        # pwm mode (100kHz for base)
+                        # 231116 testing pass
+                        self.pwm_ctrl( freq0=int(int(self.cmd_array[2])),
+                            duty0=int(self.cmd_array[3]), type0=int(self.cmd_array[4]), ch0=int(self.cmd_array[5]) )
+                        pass
 
 
                     pass
                 except Exception as e:
-                    self.print_debug(f'exception: {e}', always_print0=1)
+                    self.print_debug(f'cmd in exception: {e}', always_print0=1)
 
 
                     pass
