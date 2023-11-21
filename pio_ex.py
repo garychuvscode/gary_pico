@@ -18,8 +18,8 @@ time.sleep(0.2)
 #     nop()[31]
 
 cmd = """
-io.value(0)
-time.sleep(0.2)
+# io.value(0)
+# time.sleep(0.2)
 @rp2.asm_pio(set_init=rp2.PIO.OUT_LOW)
 def blink():
     set(pins, 1)[0]
@@ -29,15 +29,18 @@ def blink():
 
 sm = rp2.StateMachine(0, blink, freq=10000000, set_base=Pin(8))
 sm.active(1)
+# time.sleep(0.05)
 sm.active(0)
+
+"""
+
+print(cmd)
+
 # # machine.soft_reset(machines=[machine.SOFT_RESET_PIO0])
 # while True:
 #     data = sm.get()  # 从 FIFO 读取数据，但忽略它
 #     if data == -1:  # 当 FIFO 为空时，退出循环
 #         break
-"""
-
-print(cmd)
 
 
 def str_to_code(string0=""):
