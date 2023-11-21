@@ -24,13 +24,14 @@ cmd = """
 def blink():
     set(pins, 1)[0]
     set(pins, 0)[0]
-    jmp("done")
     label("done")
+    jmp("done")
+
 
 sm = rp2.StateMachine(0, blink, freq=10000000, set_base=Pin(8))
 sm.active(1)
 # time.sleep(0.05)
-sm.active(0)
+# sm.active(0)
 
 """
 

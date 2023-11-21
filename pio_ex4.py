@@ -1,12 +1,7 @@
-import rp2
+from rp2 import PIO, StateMachine, asm_pio
 from machine import Pin
 import machine
 import time
-
-led = machine.Pin(1, machine.Pin.OUT)
-io = machine.Pin(8, machine.Pin.OUT)
-io.value(0)
-time.sleep(0.2)
 
 # 将系统时钟频率设置为 250 MHz
 machine.freq(250000000)
@@ -14,12 +9,11 @@ machine.freq(250000000)
 current_freq = machine.freq()
 print("Current frequency:", current_freq)
 
+led = machine.Pin(25, machine.Pin.OUT)
 ts_pin = machine.Pin(8, machine.Pin.OUT)
 
 
-cmd = """
-
-@rp2.asm_pio(set_init=rp2.PIO.OUT_LOW)
+@asm_pio(set_init=PIO.OUT_LOW)
 def led_blink():
     # set(pins, 1)[0]
     # set(pins, 0)[0]
@@ -50,35 +44,19 @@ def led_blink():
     jmp("end_p")  # Jumps to the beginning of the blink routine
 
 
-sm1 = rp2.StateMachine(
+sm1 = StateMachine(
     1, led_blink, freq=250000000, set_base=Pin(8)
 )  # Instantiates State Machine 1
 sm1.put(4)
 sm1.active(1)  # Starts State Machine 1
+time.sleep(0.1)
+sm1.active(0)
 
-"""
-
-
-def str_to_code(string0=""):
-    # string0 = str(string0)
-    exec(string0)
-
-
-"""
-pattern gen need:
-1. pulse out => high or low (glitch testing)
-2. random pattern
-3. SWIRE pulse (low pulse)
-"""
-# cmd = "print(f'hello')"
-
-# sm = rp2.StateMachine(0, blink, freq=10000000, set_base=Pin(0))
-# # led.value(1)
-# sm.active(1)
-# sm.active(0)  # 停止PIO程序
-# led.value(0)
-
-str_to_code(cmd)
-str_to_code(cmd)
-str_to_code(cmd)
-str_to_code(cmd)
+while True:
+    value = int(input("enter delay:")) - 1
+    sm1.put(value)  # Output the next Byte
+    sm1.active(1)  # Starts State Machine 1
+    time.sleep(0.1)
+    # sm1.active(0)
+    # sm1.restart()
+    print(value)
