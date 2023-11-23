@@ -1,6 +1,6 @@
 # Example of writing a parallel byte from data; with data ready and simulated data taken flow control
 # for a more wrapped-up examples, see https://github.com/raspberrypi/pico-micropython-examples/blob/master/pio/pio_pwm.py
-
+# fmt: off
 from machine import Pin
 from rp2 import PIO, StateMachine, asm_pio
 from time import sleep
@@ -23,12 +23,26 @@ def paral_prog():
 
 # this sets the other PIO to act as a surrogate TIM computer to
 # generate a "data taken" signal when a "data ready" signal is received
-@rp2.asm_pio(sideset_init=PIO.OUT_LOW)
+@rp2.asm_pio(sideset_init=PIO.OUT_LOW,)
+
+# this is in example 2-1 (map with MSO)
+# @rp2.asm_pio(
+#     sideset_init=PIO.OUT_LOW,
+#     out_init=(rp2.PIO.OUT_HIGH,) * 4,
+#     out_shiftdir=PIO.SHIFT_RIGHT,
+#     autopull=True,
+#     pull_thresh=16,
+# )
+
 def wait_pin_high():
     wrap_target()
-
+    # pull()
     wait(1, pin, 0)  # wait for the "data ready" line to go high
-    nop().side(1)  # set the "data taken" line high
+    # nop().side(1)  # set the "data taken" line high
+
+    # this is in example 2-1 (map with MSO)
+    # out(pins, 4).side(1)  # set the "data taken" line high
+
     wait(0, pin, 0)  # wait for the "data ready" line to go low
     nop().side(0)  # set the "data taken" line low
 
@@ -44,7 +58,15 @@ paral_sm = StateMachine(
 # parallel data out pins 0-7, "data ready" out-pin 16, "data taken" in-pin 17
 paral_sm.active(1)  # Activates paral_sm program in first PIO
 
-sm4 = StateMachine(4, wait_pin_high, sideset_base=Pin(19), in_base=Pin(18))
+# this is in example 2-1 (map with MSO)
+# sm4 = StateMachine(
+#     4, wait_pin_high, sideset_base=Pin(19), out_base=Pin(12), in_base=Pin(18)
+# )
+sm4 = StateMachine(
+    4, wait_pin_high, sideset_base=Pin(19), in_base=Pin(18)
+)
+
+
 # "data ready" in-pin 18; "data taken" out-pin 19
 sm4.active(1)  # Activates wait_pin_high on second PIO
 
@@ -52,6 +74,8 @@ sm4.active(1)  # Activates wait_pin_high on second PIO
 # routine to generate data to output
 while True:
     for i in range(500):
+        # this is in example 2-1 (map with MSO)
+        # sm4.put(i)
         paral_sm.put(i)
-#        print(i)
-#         sleep(0.1 )
+        print(i)
+        # sleep(0.1)
