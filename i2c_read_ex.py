@@ -13,7 +13,7 @@ this is 7 bit address, 0x50 => b01010000
 """
 
 # 要读取的寄存器地址
-register_address = 0x10
+register_address = 0xA1
 
 # 发送要读取的寄存器地址
 i2c.writeto(device_address, bytes([register_address]))

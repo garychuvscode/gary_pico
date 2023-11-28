@@ -99,12 +99,6 @@ class pico_emb():
         # 230920 add I2C bit write function
         # 231117: this can be put at the PICO_obj (python side, not micropython side)
 
-        self.bit_clr = {"0": 0xFE, "1": 0xFD, "2": 0xFB, "3": 0xF7,
-                        "4": 0xEF, "5": 0xDF, "6": 0xBF, "7": 0x7F,}
-
-        self.bit_set = { "0": 0x1, "1": 0x2, "2": 0x4, "3": 0x8,
-                        "4": 0x10, "5": 0x20, "6": 0x40, "7": 0x80,}
-
         # ===== relay control configuration
         # relay array, need to have sequence define in source code
         self.relay_ind = [16, 17, 18, 19, 20, 21, 22, 26, 27, 28]
@@ -123,7 +117,8 @@ class pico_emb():
         self.relay_ref_array = { str(self.relay_ind[0]):self.relay0, str(self.relay_ind[1]):self.relay1, str(self.relay_ind[2]):self.relay2, str(self.relay_ind[3]):self.relay3,
                              str(self.relay_ind[4]):self.relay4, str(self.relay_ind[5]):self.relay5, str(self.relay_ind[6]):self.relay6, str(self.relay_ind[7]):self.relay7,
                              str(self.relay_ind[8]):self.relay8, str(self.relay_ind[9]):self.relay9}
-
+        # default set to 100, not active reset process at the first time
+        self.active_relay_ch = 100
 
         # ===== engineering mode assignment and initialization
 
@@ -222,7 +217,7 @@ class pico_emb():
         '''
         deifnition of command
 
-        i2c;{device-XX};{register-XX};{read/write};{data-XX or length-x}
+        i2c;{device-XX};{register-XX};{read/write};{data-[1,2,3,4,5] or length-x}
         pwm;{frequency-Hz};{duty-%};{en-0 or 1}
         pio;{number- EN, SW};
         giop;{number- 0 to 9};
@@ -258,12 +253,22 @@ class pico_emb():
     def i2c_write(self, device=0, regaddr=0, datas=0):
         '''
         write different length
+        data can be array input, using the array of number within 0-255 (FF), will
+        be data input to the slave started from the setting regaddr
+        '''
+
+        '''
+        different between writeto and writeto_mem:
+        i2c.writeto(address, data, stop=True)
+        i2c.writeto_mem(address, register, data, stop=True)
+        note: 'stop' is to choose sending the stop or not after finished, default True
         '''
 
         self.print_debug(content=f'regaddr = {regaddr}, no need to change', always_print0=1)
         n_datas = bytes([datas])
         self.print_debug(content=f'data_in = {datas}, hex: {hex(datas)} and SDA_out {n_datas}', always_print0=1)
         self.i2c.writeto_mem(device, regaddr, n_datas)
+        print(f'write_love_to_grace_XD')
 
         pass
 
@@ -282,7 +287,9 @@ class pico_emb():
             # print time is based on the UART port operation and baud rate
             # self.print_debug(f'io_change, ch {num0}, status {status0}')
             # time.sleep_us(0)
+            print(f'grace_trigger_IO:{num0} to status {status0}_QQ')
             pass
+
         else:
             self.print_debug(content=f'io change in sim mode, with num0:{num0}, state:{status0}')
 
@@ -315,6 +322,12 @@ class pico_emb():
             self.pmic_mode(1)
 
         pass
+
+    def relay_rst(self):
+        '''
+        reset all relay => 231128, no need to reset all,
+        just turn off the previous on channel
+        '''
 
     def pmic_mode(self, mode_index=4):
         '''
@@ -365,10 +378,15 @@ class pico_emb():
             # pass, use input setting
             pass
 
-        # reset all relay channel
-        self.io_reset()
+        # reset active relay channel, skip if ch_ind is 100
+        if self.active_relay_ch != 100:
+            # reset the relay channel
+            self.relay_ref_array[str(self.relay_ind[self.active_relay_ch])].value(0)
+
         time.sleep(t_dly_s)
 
+        # update turn off index
+        self.active_relay_ch = channel_index
         # open new relaly channel
         self.relay_ref_array[str(self.relay_ind[channel_index])].value(1)
 
@@ -384,7 +402,7 @@ class pico_emb():
 
     """
     # 231117: remember that some code can be put at the python side
-    # JIGM3 is the python side of MCU interface, we are only target
+    # JtIGM3 is the python side of MCU interface, we are only targe
     # GPLV4 not to cover all function in JIGM3 => it shuld be PICO_obj
 
     def bit_s(self, bit_num0=0, byte_state_tmp0=0):
@@ -681,7 +699,23 @@ self.io_temp.value(self.io_state_lock)
             self.wait_cmd()
 
             if self.cmd_array[0] == 'i2c' :
-                # self.i2c_read
+                # transfer address and data to get ready
+                device0 = int(self.cmd_array[1])
+                reg_addr0 = int(self.cmd_array[2])
+                if self.cmd_array[3] == 'w' :
+                    # i2c write
+                    integer_string = self.cmd_array[-1]
+                    # 使用負數索引時，-1 表示列表的最後一個元素，-2 表示倒數第二個元素，以此類推。這是 Python 中常見的索引運算方式。
+                    # 使用 eval 函數將字符串轉換為列表
+                    data_list = eval(integer_string)
+                    # 231128 data no need to split, pass the array directly
+                    # transfer to byte inside the write function, only pass the datas into
+                    self.i2c_write(device=device0,regaddr=reg_addr0,datas=data_list)
+                    pass
+                elif self.cmd_array[3] == 'r' :
+                    # i2c read
+                    self.i2c_read(device=device0,regaddr=reg_addr0,len=self.cmd_array[4])
+
 
                 pass
             elif self.cmd_array[0] == 'gio' :

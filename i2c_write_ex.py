@@ -1,5 +1,6 @@
 import machine
 import time
+import json
 
 # 配置GPIO引脚（GP0和GP1）为I2C引脚
 i2c = machine.I2C(0, sda=machine.Pin(0), scl=machine.Pin(1), freq=400000)
@@ -80,7 +81,7 @@ if test_mode == 3:
             x = 0
         # write from 0-255
         print(f"now counter is {x}, which is {hex(x)[2:]} in hex")
-        data_to_write = bytes([x])
+        data_to_write = bytes([x, x + 1, x + 2])
         # data_to_write = data_to_write.encode("utf-8")
         print(f"data read to wirte: {data_to_write}")
 
