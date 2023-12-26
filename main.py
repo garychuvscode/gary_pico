@@ -714,7 +714,7 @@ self.io_temp.value(self.io_state_lock)
                     pass
                 elif self.cmd_array[3] == 'r' :
                     # i2c read
-                    self.i2c_read(device=device0,regaddr=reg_addr0,len=self.cmd_array[4])
+                    self.i2c_read(device=device0,regaddr=reg_addr0,len=int(self.cmd_array[4]))
 
 
                 pass
