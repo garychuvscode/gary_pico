@@ -22,9 +22,9 @@ only used for main program development
 f_now = machine.freq()
 # print(f"requency now is: {f_now}")
 
-# 0 is simulation mode (work with teriminal, or USB COM),
-# 1 is real mode (use real interface read and write)
-# 2 is real debug mode, need to check termainal print
+# 0 is simulation mode (work with teriminal, or USB COM)=> print all
+# 1 is real mode (use real interface read and write) => only for return message
+# 2 is real debug mode, need to check termainal print =>
 sim_mode = 2
 
 class pico_emb():
@@ -56,24 +56,6 @@ class pico_emb():
         self.led4 = machine.Pin(18, machine.Pin.OUT)
         self.led5 = machine.Pin(22, machine.Pin.OUT)
 
-        # ===== general IO pin configuration
-        # the name of self.io_x doesn't , name will change with array
-        # and the mapping setting should be correct
-        # only change the mapped definition and call the correct pin from host
-        self.io_ind = [8, 9, 10, 11, 12, 13]
-        self.io_8 = machine.Pin(self.io_ind[0], machine.Pin.OUT)
-        self.io_9 = machine.Pin(self.io_ind[1], machine.Pin.OUT)
-        self.io_10 = machine.Pin(self.io_ind[2], machine.Pin.OUT)
-        self.io_11 = machine.Pin(self.io_ind[3], machine.Pin.OUT)
-        self.io_12 = machine.Pin(self.io_ind[4], machine.Pin.OUT)
-        self.io_13 = machine.Pin(self.io_ind[5], machine.Pin.OUT)
-        # IO reference define: name(GPIO number):IO_object
-        self.io_ref_array = { str(self.io_ind[0]):self.io_8, str(self.io_ind[1]):self.io_9, str(self.io_ind[2]):self.io_10,
-                             str(self.io_ind[3]):self.io_11, str(self.io_ind[4]):self.io_12, str(self.io_ind[5]):self.io_13}
-        # the value function without input will return the result
-        # self.io_status_array = { '8':0, '9':0, '10':0, '11':0, '12':0, '13':0}
-        # status of the IO can be read directly from the => pin_status = pin.value()
-
         # ===== PIO pin configuration
         # for the initialization of PIO in asm_pio => set_init=rp2.PIO.OUT_LOW
         # OUT_LOW or OUT_HIGH can be used for default state
@@ -82,6 +64,29 @@ class pico_emb():
         self.mode_index = 1
         self.en_pin = machine.Pin(self.en_ind, machine.Pin.OUT)
         self.sw_pin = machine.Pin(self.sw_ind, machine.Pin.OUT)
+
+        # ===== general IO pin configuration
+        # the name of self.io_x doesn't , name will change with array
+        # and the mapping setting should be correct
+        # only change the mapped definition and call the correct pin from host
+        self.io_ind = [8, 9, 10, 11, 12, 13]
+        self.io_0 = machine.Pin(self.io_ind[0], machine.Pin.OUT)
+        self.io_1 = machine.Pin(self.io_ind[1], machine.Pin.OUT)
+        self.io_2 = machine.Pin(self.io_ind[2], machine.Pin.OUT)
+        self.io_3 = machine.Pin(self.io_ind[3], machine.Pin.OUT)
+        self.io_4 = machine.Pin(self.io_ind[4], machine.Pin.OUT)
+        self.io_5 = machine.Pin(self.io_ind[5], machine.Pin.OUT)
+        # IO reference define: name(GPIO number):IO_object
+        # self.io_ref_array = {str(self.io_ind[0]):self.io_0, str(self.io_ind[1]):self.io_1, str(self.io_ind[2]):self.io_2,
+        #                      str(self.io_ind[3]):self.io_3, str(self.io_ind[4]):self.io_4, str(self.io_ind[5]):self.io_5}
+        # 240102 cancel the old reference array, change to new below
+        self.io_ref_array = [self.io_0, self.io_1, self.io_2, self.io_3, self.io_4, self.io_5, self.en_pin, self.sw_pin]
+
+        # the value function without input will return the result
+        # self.io_status_array = { '8':0, '9':0, '10':0, '11':0, '12':0, '13':0}
+        # status of the IO can be read directly from the => pin_status = pin.value()
+
+
 
         # ===== PWM default configuration
         # manual will be PICO obj or PWM object in PICO side
@@ -114,9 +119,13 @@ class pico_emb():
         self.relay8 = machine.Pin(self.relay_ind[8], machine.Pin.OUT)
         self.relay9 = machine.Pin(self.relay_ind[9], machine.Pin.OUT)
         # IO reference define: name(GPIO number):IO_object
-        self.relay_ref_array = { str(self.relay_ind[0]):self.relay0, str(self.relay_ind[1]):self.relay1, str(self.relay_ind[2]):self.relay2, str(self.relay_ind[3]):self.relay3,
-                             str(self.relay_ind[4]):self.relay4, str(self.relay_ind[5]):self.relay5, str(self.relay_ind[6]):self.relay6, str(self.relay_ind[7]):self.relay7,
-                             str(self.relay_ind[8]):self.relay8, str(self.relay_ind[9]):self.relay9}
+        # self.relay_ref_array = { str(self.relay_ind[0]):self.relay0, str(self.relay_ind[1]):self.relay1, str(self.relay_ind[2]):self.relay2, str(self.relay_ind[3]):self.relay3,
+        #                      str(self.relay_ind[4]):self.relay4, str(self.relay_ind[5]):self.relay5, str(self.relay_ind[6]):self.relay6, str(self.relay_ind[7]):self.relay7,
+        #                      str(self.relay_ind[8]):self.relay8, str(self.relay_ind[9]):self.relay9}
+        # 240102 cancel the old reference array, change to new below
+        self.relay_ref_array = [self.relay0, self.relay1, self.relay2, self.relay3, self.relay4, self.relay5, self.relay6, self.relay7, self.relay8, self.relay9]
+
+
         # default set to 100, not active reset process at the first time
         self.active_relay_ch = 100
 
@@ -129,6 +138,9 @@ class pico_emb():
 
         # reset all the LED
         self.debug_led(num0=1, value0=0, all=1)
+
+        self.io_reset(ind_type0='relay')
+        self.io_reset(ind_type0='io', pio_reset=1)
 
     def led_toggle(self, duration=0.1):
         '''
@@ -182,6 +194,7 @@ class pico_emb():
     def print_debug(self, content='', always_print0=0):
         '''
         replace the original print function to another debug bus
+
         '''
         if self.sim_mcu >= 1 and always_print0 == 1:
             # real mode change output to the debug bus
@@ -278,16 +291,33 @@ class pico_emb():
         update initialization based on the definition
         minimum toggle time without print, "within 100us"
         '''
-        num0 = str(num0)
+        num0 = int(num0)
+        # num0 = str(num0)
         if self.sim_mcu >= 1:
             if status0 == 1 or status0 == 0 :
                 self.io_ref_array[num0].value(status0)
+                # self.io_ref_array[num0].value(status0)
+                # 240102: don't use the sequence of discionary in micropython
+                # it's not follow the definition (before python 3.7 don't have
+                # sequence)
+                # list(self.io_ref_array.values())[num0].value(status0)
+                # print(list(self.io_ref_array.values())[num0])
+                # print(self.io_ind)
+                # print(self.io_8)
+                # print(self.io_9)
+                # print(self.io_10)
+                # print(self.io_11)
+                # print(self.io_12)
+                # print(self.io_13)
+                # print(self.io_ref_array)
+                # print(self.relay_ref_array)
+                pass
             # 231109 there are IO delay concern for minimum toggling time in this function
             # cancel the print function after debug finished
             # print time is based on the UART port operation and baud rate
             # self.print_debug(f'io_change, ch {num0}, status {status0}')
             # time.sleep_us(0)
-            print(f'grace_trigger_IO:{num0} to status {status0}_QQ')
+            print(f'grace_trigger_IO:{num0} to status {status0}_QQ, mapped io on pico is {self.io_ref_array[num0]}')
             pass
 
         else:
@@ -295,12 +325,12 @@ class pico_emb():
 
         pass
 
-    def io_reset(self, ind_arry0= None, pio_reset=0):
+    def io_reset(self, ind_type0='relay', pio_reset=0):
         '''
         set all to 0
         just general IO, no PIO
         '''
-        if ind_arry0 == None:
+        if ind_type0 == 'relay':
             # reset the relay related io pin
             ind_arry0 = self.relay_ref_array
         else:
@@ -310,12 +340,12 @@ class pico_emb():
         x_c = len(ind_arry0)
         x = 0
         while x < x_c :
-            temp_io = list(ind_arry0.values())[0]
+            temp_io = ind_arry0[x]
             temp_io.value(0)
             x = x + 1
             pass
 
-        self.print_debug(f'io_reset done')
+        self.print_debug(f'io_reset for {ind_type0} done',always_print0=1)
 
         if pio_reset == 1:
             # PIO also reset, reset to all 0
@@ -339,20 +369,20 @@ class pico_emb():
         # normal condition is IO, both IO and pulse IO are ok
         self.mode_index = mode_index
         if self.mode_index == 1:
-            self.io_change(num0=str(self.en_ind), status0=0)
-            self.io_change(num0=str(self.sw_ind), status0=0)
+            self.en_pin.value(0)
+            self.sw_pin.value(0)
             pass
         elif self.mode_index == 2:
-            self.io_change(num0=str(self.en_ind), status0=0)
-            self.io_change(num0=str(self.sw_ind), status0=1)
+            self.en_pin.value(0)
+            self.sw_pin.value(1)
             pass
         elif self.mode_index == 3:
-            self.io_change(num0=str(self.en_ind), status0=1)
-            self.io_change(num0=str(self.sw_ind), status0=0)
+            self.en_pin.value(1)
+            self.sw_pin.value(0)
             pass
         elif self.mode_index == 4:
-            self.io_change(num0=str(self.en_ind), status0=1)
-            self.io_change(num0=str(self.sw_ind), status0=1)
+            self.en_pin.value(1)
+            self.sw_pin.value(1)
             pass
         else:
             self.print_debug(f'command :{mode_index} is invalid, no action', always_print0=1)
@@ -381,14 +411,14 @@ class pico_emb():
         # reset active relay channel, skip if ch_ind is 100
         if self.active_relay_ch != 100:
             # reset the relay channel
-            self.relay_ref_array[str(self.relay_ind[self.active_relay_ch])].value(0)
+            self.relay_ref_array[int(self.active_relay_ch)].value(0)
 
         time.sleep(t_dly_s)
 
         # update turn off index
         self.active_relay_ch = channel_index
         # open new relaly channel
-        self.relay_ref_array[str(self.relay_ind[channel_index])].value(1)
+        self.relay_ref_array[int(self.active_relay_ch)].value(1)
 
         pass
 
@@ -459,7 +489,7 @@ class pico_emb():
 
         pass
 
-    def io_pulse_gen(self, pulse_amount0=1, pulse_type0='LOW', duration_100us=1, num0=''):
+    def io_pulse_gen(self, pulse_amount0=1, pulse_type0='LOW', duration_100us=1, num0=0):
         '''
         num0 = io_ind or pio(en_ind, sw_ind), both are ok
         by using loop to IO command generate the pulse output
@@ -469,7 +499,7 @@ class pico_emb():
         '''
 
         # io pin selection
-        self.io_temp = self.io_ref_array[num0]
+        self.io_temp = self.io_ref_array[int(num0)]
         # error command check index
         self.io_state_lock = 0
         # io_transition state
@@ -761,9 +791,9 @@ self.io_temp.value(self.io_state_lock)
                     if self.cmd_array[1] == 'p' :
                         # pattern gen testing
                         # 231115 wait for scope check for calibration
-                        self.io_change(num0='8',status0=1)
+                        self.io_change(num0='0',status0=1)
                         self.print_debug('enter pattern gen test')
-                        self.io_pulse_gen(pulse_amount0=5, pulse_type0='LOW', duration_100us=1, num0='8')
+                        self.io_pulse_gen(pulse_amount0=5, pulse_type0='LOW', duration_100us=1, num0=0)
                         pass
                     if self.cmd_array[1] == 'i' :
                         # i2c mode
