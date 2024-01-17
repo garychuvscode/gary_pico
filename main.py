@@ -140,7 +140,10 @@ class pico_emb():
         self.debug_led(num0=1, value0=0, all=1)
 
         self.io_reset(ind_type0='relay')
-        self.io_reset(ind_type0='io', pio_reset=1)
+        # 240117 change the setting of PIO_reset to 0, keep the same
+        # default setting for the MCU
+        self.io_reset(ind_type0='io', pio_reset=0)
+        self.pmic_mode()
 
     def led_toggle(self, duration=0.1):
         '''
@@ -196,10 +199,11 @@ class pico_emb():
         replace the original print function to another debug bus
 
         '''
-        if self.sim_mcu >= 1 and always_print0 == 1:
+        if self.sim_mcu >= 1 :
             # real mode change output to the debug bus
+            # 240117 change to print all in UART and sim_mcu = 2 allow print to USB COM
             self.uart1.write(content)
-            if self.sim_mcu == 2 :
+            if self.sim_mcu == 2 and always_print0 == 1 :
                 # pico connect and need to check termainal
                 print(content)
         elif self.sim_mcu == 0:
@@ -230,14 +234,18 @@ class pico_emb():
         '''
         deifnition of command
 
-        i2c;{device-XX};{register-XX};{read/write};{data-[1,2,3,4,5] or length-x}
+        fromat:
+        i2c;{device-XX};{register-XX};{r_read/w_write};{data-[1,2,3,4,5] or length-x}
         pwm;{frequency-Hz};{duty-%};{en-0 or 1}
         pio;{number- EN, SW};
-        giop;{number- 0 to 9};
+        gio;{number- 0 to 9};{status- 0_off, 1_on}
         gio;{number};{status-1 or 0}
-        p_mode;{1-4}
+        en_mode;{1-4}
+        rly;{channel_active}
+
         # mode sequence: 1-4: (EN, SW) = (0, 0),  (0, 1), (1, 0), (1, 1) => default normal
-        gio;8;1
+        # pwm;
+        # gio;8;1
 
         note: pio 0-9 only support 100us or longer step
 
@@ -328,7 +336,7 @@ class pico_emb():
     def io_reset(self, ind_type0='relay', pio_reset=0):
         '''
         set all to 0
-        just general IO, no PIO
+        just general IO, no PIO, PIO default is high (EN, SW)
         '''
         if ind_type0 == 'relay':
             # reset the relay related io pin
@@ -510,7 +518,7 @@ class pico_emb():
         if self.sim_mcu == 1 :
             self.io_state0 = self.io_temp.value()
         else :
-            # example is low pulse
+            # sim mode example is low pulse
             self.io_state0 = 1
 
         # io_state should be:
@@ -728,60 +736,61 @@ self.io_temp.value(self.io_state_lock)
 
             self.wait_cmd()
 
-            if self.cmd_array[0] == 'i2c' :
-                # transfer address and data to get ready
-                device0 = int(self.cmd_array[1])
-                reg_addr0 = int(self.cmd_array[2])
-                if self.cmd_array[3] == 'w' :
-                    # i2c write
-                    integer_string = self.cmd_array[-1]
-                    # 使用負數索引時，-1 表示列表的最後一個元素，-2 表示倒數第二個元素，以此類推。這是 Python 中常見的索引運算方式。
-                    # 使用 eval 函數將字符串轉換為列表
-                    data_list = eval(integer_string)
-                    # 231128 data no need to split, pass the array directly
-                    # transfer to byte inside the write function, only pass the datas into
-                    self.i2c_write(device=device0,regaddr=reg_addr0,datas=data_list)
+            # only one try - except is needed for checking
+            try:
+
+                if self.cmd_array[0] == 'i2c' :
+                    # transfer address and data to get ready
+                    device0 = int(self.cmd_array[1])
+                    reg_addr0 = int(self.cmd_array[2])
+                    if self.cmd_array[3] == 'w' :
+                        # i2c write
+                        integer_string = self.cmd_array[-1]
+                        # 使用負數索引時，-1 表示列表的最後一個元素，-2 表示倒數第二個元素，以此類推。這是 Python 中常見的索引運算方式。
+                        # 使用 eval 函數將字符串轉換為列表
+                        data_list = eval(integer_string)
+                        # 231128 data no need to split, pass the array directly
+                        # transfer to byte inside the write function, only pass the datas into
+                        self.i2c_write(device=device0,regaddr=reg_addr0,datas=data_list)
+                        pass
+                    elif self.cmd_array[3] == 'r' :
+                        # i2c read
+                        # 240117 for the read, need to check the format of the output
+                        self.i2c_read(device=device0,regaddr=reg_addr0,len=int(self.cmd_array[4]))
+
                     pass
-                elif self.cmd_array[3] == 'r' :
-                    # i2c read
-                    self.i2c_read(device=device0,regaddr=reg_addr0,len=int(self.cmd_array[4]))
+                elif self.cmd_array[0] == 'gio' :
+                    self.io_change(num0=self.cmd_array[1], status0=int(self.cmd_array[2]))
+                    pass
+                elif self.cmd_array[0] == 'pio' :
+                    '''
+                    '''
+                    pass
+                elif self.cmd_array[0] == 'pwm' :
+                    self.pwm_ctrl(freq0=int(self.cmd_array[1]),duty0=int(self.cmd_array[2]),type0=int(self.cmd_array[3]),ch0=int(self.cmd_array[4]))
+                    pass
+                elif self.cmd_array[0] == 'en_mode' :
+                    self.pmic_mode(int(self.cmd_array[1]))
+                    pass
+                elif self.cmd_array[0] == 'rly' :
+                    self.relay_ctrl(int(self.cmd_array[1]))
+                    pass
+                elif self.cmd_array[0] == 'grace' :
+                    # engineering mode, parameter change
 
-
-                pass
-            elif self.cmd_array[0] == 'gio' :
-                self.io_change(num0=self.cmd_array[1], status0=int(self.cmd_array[2]))
-                pass
-            elif self.cmd_array[0] == 'pio' :
-                pass
-            elif self.cmd_array[0] == 'pwm' :
-                pass
-            elif self.cmd_array[0] == 'en_mode' :
-                pass
-            elif self.cmd_array[0] == 'grace' :
-                # engineering mode, parameter change
-                try:
                     # for invalid data input or every error, all assign to fail
                     if self.cmd_array[1] == 'relay_dly' :
                         # change relay delay time
                         self.relay_dly = int(self.cmd_array[2])
+                        pass
                     if self.cmd_array[1] == 'pwm_scale' :
                         # change pwm scaling factor
                         self.pwm_scaling = int(self.cmd_array[2])
-
-
-
-
+                        pass
                     pass
-                except Exception as e:
-                    self.print_debug(f'exception: {e}', always_print0=1)
-                    self.print_debug(f'command for engineering mode fail {self.cmd_array}')
-
-                    pass
-
-                pass
-            elif self.cmd_array[0] == 't' :
-                # testing pattern during development status
-                try:
+                elif self.cmd_array[0] == 't' :
+                    # testing pattern during development status
+                    # try:
                     if self.cmd_array[1] == 'io' :
                         # io toggling test
                         # 231110 done
@@ -808,20 +817,38 @@ self.io_temp.value(self.io_state_lock)
                         self.pwm_ctrl( freq0=int(int(self.cmd_array[2])),
                             duty0=int(self.cmd_array[3]), type0=int(self.cmd_array[4]), ch0=int(self.cmd_array[5]) )
                         pass
+                    if self.cmd_array[1] == 'usb' :
+                        '''
+                        usb_port command send testing
+                        toggle LED for the pin 22 debug port
+                        '''
+                        c_tog = 5
+                        x_tog = 0
+                        self.debug_led(num0=2,value0=1)
+                        while x_tog < c_tog:
 
+                            self.debug_led(num0=int(self.cmd_array[2]),value0=1)
+                            time.sleep_ms(500)
+                            self.debug_led(num0=int(self.cmd_array[2]),value0=0)
+                            time.sleep_ms(500)
+                            x_tog = x_tog + 1
+                            self.print_debug(f'now is at tog ={x_tog}')
+                            pass
+                        self.debug_led(num0=2,value0=0)
+                        pass
 
+                    # end of testing pattern
                     pass
-                except Exception as e:
-                    self.print_debug(f'cmd in exception: {e}', always_print0=1)
-
-
+                elif self.cmd_array[0] == 'u' :
+                    # universal command, but need to reference to the function or source code
+                    self.str_to_code(string0=str(self.cmd_array[1]))
                     pass
 
+                # end of try for Grace
                 pass
-            elif self.cmd_array[0] == 'u' :
-                # universal command
-
-
+            except Exception as e:
+                self.print_debug(f'exception: {e}',always_print0=1)
+                self.print_debug(f'command for engineering mode fail {self.cmd_array}',always_print0=1)
                 pass
 
             # end pico main while
