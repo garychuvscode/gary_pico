@@ -21,6 +21,10 @@ only used for main program development
 # default frequency 150MHz
 f_now = machine.freq()
 # print(f"requency now is: {f_now}")
+machine.freq(250000000)
+# print(machine.freq())
+
+
 
 # 0 is simulation mode (work with teriminal, or USB COM)=> print all
 # 1 is real mode (use real interface read and write) => only for return message
@@ -91,7 +95,7 @@ class pico_emb():
         # ===== PWM default configuration
         # manual will be PICO obj or PWM object in PICO side
         self.freq_set = 1000000
-        self.pwm_scaling = 100
+        self.pwm_scaling = 1000
         self.pwm0_pin = 2
         self.pwm1_pin = 3
         # duty 0 is default low
@@ -199,12 +203,14 @@ class pico_emb():
         replace the original print function to another debug bus
 
         '''
-        if self.sim_mcu >= 1 :
+        if self.sim_mcu == 1 and always_print0 == 1 :
             # real mode change output to the debug bus
             # 240117 change to print all in UART and sim_mcu = 2 allow print to USB COM
             self.uart1.write(content)
-            if self.sim_mcu == 2 and always_print0 == 1 :
-                # pico connect and need to check termainal
+        elif self.sim_mcu == 2:
+            # pico connect and need to check termainal
+            self.uart1.write(content)
+            if always_print0 == 1 :
                 print(content)
         elif self.sim_mcu == 0:
             print(content)
@@ -325,7 +331,7 @@ class pico_emb():
             # print time is based on the UART port operation and baud rate
             # self.print_debug(f'io_change, ch {num0}, status {status0}')
             # time.sleep_us(0)
-            print(f'grace_trigger_IO:{num0} to status {status0}_QQ, mapped io on pico is {self.io_ref_array[num0]}')
+            # self.print_debug(f'grace_trigger_IO:{num0} to status {status0}_QQ, mapped io on pico is {self.io_ref_array[num0]}')
             pass
 
         else:
@@ -512,8 +518,15 @@ class pico_emb():
         self.io_state_lock = 0
         # io_transition state
         self.io_tran = 0
-        # 100us constant calibration index
-        self.us100_counter_cal =100
+        '''
+        this is 100us constant calibration index
+        adjust for pulse width
+        set 0 is 10us
+        set 85 is 100us
+        delay command cause 5us @ 250MHz
+        '''
+
+        self.us100_counter_cal =0
 
         if self.sim_mcu == 1 :
             self.io_state0 = self.io_temp.value()
@@ -558,7 +571,7 @@ self.io_temp.value(self.io_state_lock)
 
                 self.str_cmd = self.str_cmd + single_pulse
                 # maybe it's able to compare with using loop with direct command change
-                # optional [erformance comparison
+                # optional performance comparison
                 self.print_debug(content=f'pulse_count x in {x_pulse} {pulse_amount0}')
                 self.print_debug(content=f'command become \n{self.str_cmd}')
 
@@ -579,20 +592,20 @@ self.io_temp.value(self.io_state_lock)
 
         pass
 
-    def pwm_ctrl(self, freq0=None, duty0=0, type0=0, ch0=0):
+    def pwm_ctrl(self, freq0=None, duty0=0.0, type0=0, ch0=0):
         """
         duty is either % or duration_ns, depends on type
         type: 0- duty in %, 1- duration_ns
         if no freq setting, freq set to default
         set duty to 0 to disable
-        100 is default freq scaling, freq_final = scaling*freq0, default 1MHz
+        1000 is default freq scaling, freq_final = scaling*freq0, default 1MHz
         """
 
         if freq0 == None:
             # use default setting for frequency
             freq0 = self.freq_set
         else:
-            freq0 = int(freq0)*self.pwm_scaling
+            freq0 = int(float(freq0)*self.pwm_scaling)
 
         if type0 == 0:
             # duty in %
@@ -767,7 +780,7 @@ self.io_temp.value(self.io_state_lock)
                     '''
                     pass
                 elif self.cmd_array[0] == 'pwm' :
-                    self.pwm_ctrl(freq0=int(self.cmd_array[1]),duty0=int(self.cmd_array[2]),type0=int(self.cmd_array[3]),ch0=int(self.cmd_array[4]))
+                    self.pwm_ctrl(freq0=float(self.cmd_array[1]),duty0=float(self.cmd_array[2]),type0=int(self.cmd_array[3]),ch0=int(self.cmd_array[4]))
                     pass
                 elif self.cmd_array[0] == 'en_mode' :
                     self.pmic_mode(int(self.cmd_array[1]))
@@ -794,15 +807,15 @@ self.io_temp.value(self.io_state_lock)
                     if self.cmd_array[1] == 'io' :
                         # io toggling test
                         # 231110 done
-                        self.io_change(num0=self.cmd_array[1], status0=int(1))
-                        self.io_change(num0=self.cmd_array[1], status0=int(0))
+                        self.io_change(num0=self.cmd_array[2], status0=int(1))
+                        self.io_change(num0=self.cmd_array[2], status0=int(0))
                         pass
                     if self.cmd_array[1] == 'p' :
                         # pattern gen testing
                         # 231115 wait for scope check for calibration
                         self.io_change(num0='0',status0=1)
                         self.print_debug('enter pattern gen test')
-                        self.io_pulse_gen(pulse_amount0=5, pulse_type0='LOW', duration_100us=1, num0=0)
+                        self.io_pulse_gen(pulse_amount0=10, pulse_type0='LOW', duration_100us=1, num0=0)
                         pass
                     if self.cmd_array[1] == 'i' :
                         # i2c mode
@@ -836,7 +849,6 @@ self.io_temp.value(self.io_state_lock)
                             pass
                         self.debug_led(num0=2,value0=0)
                         pass
-
                     # end of testing pattern
                     pass
                 elif self.cmd_array[0] == 'u' :
