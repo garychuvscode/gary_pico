@@ -60,6 +60,13 @@ class pico_emb():
         self.led4 = machine.Pin(18, machine.Pin.OUT)
         self.led5 = machine.Pin(22, machine.Pin.OUT)
 
+        # # add backup for the not using debug led
+        # self.led1 = self.led
+        # self.led2 = self.led
+        # self.led3 = self.led
+        # self.led4 = self.led
+        # self.led5 = self.led
+
         # ===== PIO pin configuration
         # for the initialization of PIO in asm_pio => set_init=rp2.PIO.OUT_LOW
         # OUT_LOW or OUT_HIGH can be used for default state
@@ -223,6 +230,7 @@ class pico_emb():
         command input structure
         '''
         self.print_debug(content=f'Dear Grace, pico is ready for you :)', always_print0=1)
+        # command update everytime here, no need to worry for infinite loop
         cmd_in_raw = input()
         self.print_debug(f'input cmd is :{cmd_in_raw}')
         self.led_toggle()
@@ -269,13 +277,25 @@ class pico_emb():
         # 从I2C设备读取数据
         data_bytes = self.i2c.readfrom(device, len)  # 4表示要读取的字节数
 
-        numeric_list = [byte for byte in data_bytes]
-        hex_array = [hex(x)[2:] for x in numeric_list]
-        self.print_debug(content=f'data read= {data_bytes}, hex is: {hex_array} and output {numeric_list}', always_print0=1)
+        # numeric_list = [byte for byte in data_bytes]
+        # hex_array = [hex(x)[2:] for x in numeric_list]
+
+        # 240123 new method, refer to the modification of i2c read example
+        # 將每個字節轉換為十六進制字符串，並使用逗號分隔
+        hex_strings = ", ".join([hex(byte) for byte in data_bytes])
+        # 去除 "0x" 並分割字符串
+        hex_values = hex_strings.replace("0x", "").split(", ")
+        # 將每個字符串轉換為十進制整數，再轉換為固定兩位的十六進制字符串
+        byte_list = ["{:02X}".format(int(value, 16)) for value in hex_values]
+
+        self.print_debug(content=f'data read= {data_bytes}, hex is: {hex_strings} and output {byte_list}', always_print0=1)
 
         # print to pico termainal, being read from PC
-        print(numeric_list)
-        return numeric_list
+        # print(numeric_list)
+        # return numeric_list
+        print(byte_list)
+        return byte_list
+
 
     def i2c_write(self, device=0, regaddr=0, datas=0):
         '''
@@ -367,11 +387,23 @@ class pico_emb():
 
         pass
 
-    def relay_rst(self):
+    def relay_rst(self, type0='relay'):
         '''
         reset all relay => 231128, no need to reset all,
         just turn off the previous on channel
+        to reset all io by this function, enter: 'io'
         '''
+
+        io_arry = self.relay_ref_array
+        if type0 == 'io':
+            io_arry = self.io_ref_array
+
+        for io_ch in io_arry:
+            io_ch.value(0)
+            self.print_debug(f'channel {io_ch} reset done')
+            pass
+
+        pass
 
     def pmic_mode(self, mode_index=4):
         '''
@@ -404,7 +436,7 @@ class pico_emb():
 
         pass
 
-    def relay_ctrl(self, channel_index=0, t_dly_s=0):
+    def relay_ctrl(self, channel_index=0, t_dly_s=0.0):
         '''
         self.relay_ind = [16, 17, 18, 19, 20, 21, 22, 26, 27, 28]
         from 0 to 9 \n
@@ -436,13 +468,6 @@ class pico_emb():
 
         pass
 
-    def ezcommand(self, command0):
-        '''
-        same operation with JIGM3, transfer code to string,
-        need to prevent reserve words conflict
-        '''
-
-        pass
 
     """
     # 231117: remember that some code can be put at the python side
@@ -700,7 +725,7 @@ self.io_temp.value(self.io_state_lock)
     def str_to_code(self, string0="", *args, **kwargs ):
         '''
         function run for string command, also include the adjustment of 'TAB'
-        to prevent error fo the operation
+        to prevent error for the operation
         '''
         # # 231114, this is just testing string for the debugging
         # string0 = '''self.print_debug(content=f'Grace went back home now', always_print0=1)'''
@@ -731,7 +756,10 @@ self.io_temp.value(self.io_state_lock)
         '''
         accept different command during operation for flexible adjustment of
         program flow, or used to add new interrupt during operation
+        240123: plan to add the function of 1-add cmd, 2-print cmd, 3-excution
         '''
+        self.str_to_code(cmd0)
+
         pass
 
     # # 231117 this function have operation limitation, move to pico_obj at python side
@@ -743,9 +771,20 @@ self.io_temp.value(self.io_state_lock)
     def pico_emb_main(self):
         '''
         pico main program
+        > extra return information will be added at main, not in single
+        function (general print items)
+        > for special return (i2c read...) will be print(return) in single function
         '''
 
+        pwr_signal = 0
         while 1 :
+
+            if pwr_signal == 0 :
+                # power up before wait command, toggle LED for PWR up
+                self.led_toggle(duration=0.3)
+                self.led_toggle(duration=0.3)
+                self.led_toggle(duration=0.3)
+                pwr_signal = 1
 
             self.wait_cmd()
 
@@ -765,41 +804,60 @@ self.io_temp.value(self.io_state_lock)
                         # 231128 data no need to split, pass the array directly
                         # transfer to byte inside the write function, only pass the datas into
                         self.i2c_write(device=device0,regaddr=reg_addr0,datas=data_list)
+                        # return is in function
                         pass
                     elif self.cmd_array[3] == 'r' :
                         # i2c read
                         # 240117 for the read, need to check the format of the output
                         self.i2c_read(device=device0,regaddr=reg_addr0,len=int(self.cmd_array[4]))
-
+                        # return is in function
+                        pass
                     pass
                 elif self.cmd_array[0] == 'gio' :
                     self.io_change(num0=self.cmd_array[1], status0=int(self.cmd_array[2]))
+                    # return item below
+                    print(f'g_gio_{self.cmd_array[1]}_pin_{self.io_ref_array[int(self.cmd_array[1])]}_status_{self.cmd_array[2]}')
                     pass
                 elif self.cmd_array[0] == 'pio' :
                     '''
                     '''
+                    # return item below
+                    print(f'Grace_say_comming_soon')
                     pass
                 elif self.cmd_array[0] == 'pwm' :
                     self.pwm_ctrl(freq0=float(self.cmd_array[1]),duty0=float(self.cmd_array[2]),type0=int(self.cmd_array[3]),ch0=int(self.cmd_array[4]))
+                    # return item below
+                    print(f'g_pwm_f_{self.cmd_array[1]}_D_{self.cmd_array[2]}_t_{self.cmd_array[3]}_ch_{self.cmd_array[4]}')
                     pass
                 elif self.cmd_array[0] == 'en_mode' :
                     self.pmic_mode(int(self.cmd_array[1]))
+                    # return item below
+                    print(f'Grace_mode_{self.cmd_array[1]}')
                     pass
                 elif self.cmd_array[0] == 'rly' :
-                    self.relay_ctrl(int(self.cmd_array[1]))
+                    r_ch = int(self.cmd_array[1])
+                    self.relay_ctrl(r_ch)
+                    print(f'Grace_relay_{self.cmd_array[1]}_pin_{self.relay_ind[r_ch]}')
                     pass
                 elif self.cmd_array[0] == 'grace' :
-                    # engineering mode, parameter change
+                    # engineering mode, parameter change or special function
 
                     # for invalid data input or every error, all assign to fail
                     if self.cmd_array[1] == 'relay_dly' :
                         # change relay delay time
                         self.relay_dly = int(self.cmd_array[2])
+                        print(f'relay_dly_def_change_{self.relay_dly}')
                         pass
                     if self.cmd_array[1] == 'pwm_scale' :
                         # change pwm scaling factor
                         self.pwm_scaling = int(self.cmd_array[2])
+                        print(f'pwm_scaling_def_change_{self.pwm_scaling}')
                         pass
+                    if self.cmd_array[1] == 'io_rst' :
+                        # reset io and relay
+                        self.relay_rst()
+                        self.relay_rst('io')
+                        print(f'io_relay_reset')
                     pass
                 elif self.cmd_array[0] == 't' :
                     # testing pattern during development status
@@ -821,7 +879,7 @@ self.io_temp.value(self.io_state_lock)
                         # i2c mode
                         # 231115 wait for real test
                         self.i2c_write(device=0x4E, regaddr=0xA3, datas=183)
-                        x = self.i2c_read(device=0x4E, regaddr=0xA3, len=1)
+                        x = self.i2c_read(device=0x4E, regaddr=0xA0, len=10)
                         self.print_debug(str(x))
                         pass
                     if self.cmd_array[1] == 'pw' :
@@ -830,6 +888,17 @@ self.io_temp.value(self.io_state_lock)
                         self.pwm_ctrl( freq0=int(int(self.cmd_array[2])),
                             duty0=int(self.cmd_array[3]), type0=int(self.cmd_array[4]), ch0=int(self.cmd_array[5]) )
                         pass
+                    if self.cmd_array[1] == 'r' :
+                        print(f'relay active')
+                        self.relay_ctrl(channel_index=0,t_dly_s=0)
+                        time.sleep_us(200)
+                        self.relay_ctrl(channel_index=1,t_dly_s=0.05)
+                        time.sleep_us(200)
+                        self.relay_ctrl(channel_index=2,t_dly_s=0.1)
+                        time.sleep_us(200)
+                        self.relay_ctrl(channel_index=3,t_dly_s=0)
+                        self.relay_rst(type0='relay')
+
                     if self.cmd_array[1] == 'usb' :
                         '''
                         usb_port command send testing
@@ -840,9 +909,9 @@ self.io_temp.value(self.io_state_lock)
                         self.debug_led(num0=2,value0=1)
                         while x_tog < c_tog:
 
-                            self.debug_led(num0=int(self.cmd_array[2]),value0=1)
+                            self.debug_led(num0=int(self.cmd_array[5]),value0=1)
                             time.sleep_ms(500)
-                            self.debug_led(num0=int(self.cmd_array[2]),value0=0)
+                            self.debug_led(num0=int(self.cmd_array[5]),value0=0)
                             time.sleep_ms(500)
                             x_tog = x_tog + 1
                             self.print_debug(f'now is at tog ={x_tog}')
@@ -853,6 +922,8 @@ self.io_temp.value(self.io_state_lock)
                     pass
                 elif self.cmd_array[0] == 'u' :
                     # universal command, but need to reference to the function or source code
+                    # this is single line universal command
+
                     self.str_to_code(string0=str(self.cmd_array[1]))
                     pass
 
@@ -864,6 +935,7 @@ self.io_temp.value(self.io_state_lock)
                 pass
 
             # end pico main while
+
             pass
 
 
