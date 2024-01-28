@@ -859,6 +859,11 @@ self.io_temp.value(self.io_state_lock)
                         self.relay_rst('io')
                         print(f'io_relay_reset')
                     pass
+
+                elif self.cmd_array[0] == '*IDN?' :
+                    # identify for the device to control
+                    print(f'Grace')
+
                 elif self.cmd_array[0] == 't' :
                     # testing pattern during development status
                     # try:
@@ -909,10 +914,10 @@ self.io_temp.value(self.io_state_lock)
                         self.debug_led(num0=2,value0=1)
                         while x_tog < c_tog:
 
-                            self.debug_led(num0=int(self.cmd_array[5]),value0=1)
-                            time.sleep_ms(500)
-                            self.debug_led(num0=int(self.cmd_array[5]),value0=0)
-                            time.sleep_ms(500)
+                            self.debug_led(num0=int(5),value0=1)
+                            time.sleep_ms(100)
+                            self.debug_led(num0=int(5),value0=0)
+                            time.sleep_ms(100)
                             x_tog = x_tog + 1
                             self.print_debug(f'now is at tog ={x_tog}')
                             pass
