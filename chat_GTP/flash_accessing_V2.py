@@ -27,41 +27,41 @@ class FlashObj:
         except OSError as e:
             return f"Error reading file: {e}"
 
-    def write_file(self, filename, content):
+    def write_file(self, filename, content, type0='w'):
         """(function: Write content to a file, parameters: filename - name of the file, content - content to write)"""
         try:
             file_path = f"{self.flash_path}/{filename}"
-            with open(file_path, "w") as file:
+            with open(file_path, type0) as file:
                 file.write(content)
             return "File written successfully."
         except OSError as e:
             return f"Error writing file: {e}"
 
-    def write_file_append(self, filename, content):
+    def write_file_append(self, filename, content, type0='a'):
         """(function: Append content to a file, parameters: filename - name of the file, content - content to append)"""
         try:
             file_path = f"{self.flash_path}/{filename}"
-            with open(file_path, "a") as file:
+            with open(file_path, type0) as file:
                 file.write(content)
             return "File appended successfully."
         except OSError as e:
             return f"Error appending file: {e}"
 
-    def write_file_with_separator(self, filename, content, separator="---"):
+    def write_file_with_separator(self, filename, content, separator="---", type0='w'):
         """(function: Write content to a file with a separator, parameters: filename - name of the file, content - content to write, separator - separator)"""
         try:
             file_path = f"{self.flash_path}/{filename}"
-            with open(file_path, "w") as file:
+            with open(file_path, type0) as file:
                 file.write(f"{separator} {content} {separator}")
             return "File written with separator successfully."
         except OSError as e:
             return f"Error writing file with separator: {e}"
 
-    def write_file_with_timestamp(self, filename, content):
+    def write_file_with_timestamp(self, filename, content, type0='a'):
         """(function: Write content to a file with a timestamp, parameters: filename - name of the file, content - content to write)"""
         try:
             file_path = f"{self.flash_path}/{filename}"
-            with open(file_path, "a") as file:
+            with open(file_path, type0) as file:
                 timestamp = utime.localtime()
                 formatted_time = "{:04}-{:02}-{:02} {:02}:{:02}:{:02}".format(
                     timestamp[0],
@@ -117,33 +117,29 @@ class FlashObj:
         except OSError as e:
             return f"Error getting current working directory: {e}"
 
-    def find_file_or_directory(self, name, current_path="/", search_directories=False):
-        """(function: Recursively find file or directory in the given path)"""
+    def find_file_or_directory(self, name, current_path="/"):
         try:
             files = uos.listdir(current_path)
             for file in files:
                 file_path = f"{current_path}/{file}"
-                if (
-                    uos.stat(file_path)[0] & 0o170000 == 0o040000
-                ):  # Check if it's a directory
-                    if search_directories and file == name:
-                        return file_path
-                    result = self.find_file_or_directory(
-                        name, file_path, search_directories
-                    )
+                is_directory = uos.stat(file_path)[0] & 0o170000 == 0o040000
+
+                if is_directory:
+                    # Recursive call for directories
+                    result = self.find_file_or_directory(name, file_path)
                     if result:
                         return result
-                elif not search_directories and file == name:
+                elif file == name:
                     return file_path
+
         except OSError as e:
             print(f"Error finding file or directory: {e}")
+
         return None
 
     def get_directory_path(self, directory_name):
         """(function: Get the path of the specified directory in Flash)"""
-        result = self.find_file_or_directory(
-            directory_name, self.flash_path, search_directories=True
-        )
+        result = self.find_file_or_directory(directory_name, self.flash_path)
         if result:
             return f"The path of directory '{directory_name}' is: {result}"
         else:
@@ -226,9 +222,7 @@ class FlashObj:
         directory
         """
         # looking for the directory from the root (default current path)
-        full_path0 = self.find_file_or_directory(
-            name=target_dir_name, search_directories=True
-        )
+        full_path0 = self.find_file_or_directory(name=target_dir_name)
         uos.chdir(full_path0)
         print(f"now change to {uos.getcwd()}")
 
@@ -388,7 +382,7 @@ flash_obj.list_all_files()
 
 # this need to be full path or just under current directory
 # uos.chdir("grace_try2")
-uos.chdir("grace_try1")
+uos.chdir("/grace_try1")
 
 flash_obj.interactive_terminal()
 
