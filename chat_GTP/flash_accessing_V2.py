@@ -5,6 +5,7 @@ import utime
 class FlashObj:
     def __init__(self, flash_path="/"):
         self.flash_path = flash_path
+        self.sim_flash = 0
 
     def space_check(self):
         """(function: Check available space on the flash)"""
@@ -90,9 +91,8 @@ class FlashObj:
             directory_path = f"{self.flash_path}{directory}"
             files = uos.listdir(directory_path)
             for file in files:
-                
                 file_path = f"{directory_path}/{file}"
-                print(f'now is file: {file} in path: {file_path}')
+                print(f"now is file: {file} in path: {file_path}")
                 if (
                     uos.stat(file_path)[0] & 0o170000 == 0o040000
                 ):  # Check if it's a directory
@@ -100,10 +100,10 @@ class FlashObj:
                 else:
                     uos.remove(file_path)
                     # add '/' in front of the path : since the root is '/'
-                    print(f'remove file: /{file_path} done')
+                    print(f"remove file: /{file_path} done")
             uos.rmdir(directory_path)
             # add '/' in front of the path : since the root is '/'
-            print(f'remove directory: /{directory_path} done')
+            print(f"remove directory: /{directory_path} done")
             return f"Directory '/{directory_path}' removed successfully."
         except OSError as e:
             return f"Error removing directory: {e}"
@@ -117,17 +117,20 @@ class FlashObj:
         except OSError as e:
             return f"Error getting current working directory: {e}"
 
-
-    def find_file_or_directory(self, name, current_path, search_directories=False):
-        '''(function: Recursively find file or directory in the given path)'''
+    def find_file_or_directory(self, name, current_path="/", search_directories=False):
+        """(function: Recursively find file or directory in the given path)"""
         try:
             files = uos.listdir(current_path)
             for file in files:
                 file_path = f"{current_path}/{file}"
-                if uos.stat(file_path)[0] & 0o170000 == 0o040000:  # Check if it's a directory
+                if (
+                    uos.stat(file_path)[0] & 0o170000 == 0o040000
+                ):  # Check if it's a directory
                     if search_directories and file == name:
                         return file_path
-                    result = self.find_file_or_directory(name, file_path, search_directories)
+                    result = self.find_file_or_directory(
+                        name, file_path, search_directories
+                    )
                     if result:
                         return result
                 elif not search_directories and file == name:
@@ -137,19 +140,23 @@ class FlashObj:
         return None
 
     def get_directory_path(self, directory_name):
-        '''(function: Get the path of the specified directory in Flash)'''
-        result = self.find_file_or_directory(directory_name, self.flash_path, search_directories=True)
+        """(function: Get the path of the specified directory in Flash)"""
+        result = self.find_file_or_directory(
+            directory_name, self.flash_path, search_directories=True
+        )
         if result:
             return f"The path of directory '{directory_name}' is: {result}"
         else:
             return f"Directory '{directory_name}' not found."
 
     def interactive_terminal(self):
-        '''(function: Interactive terminal for browsing directories and viewing files)'''
+        """(function: Interactive terminal for browsing directories and viewing files)"""
         try:
             while True:
-                user_input = input("Enter command (exit, dir, file; 'filename', dir; 'directory_name', exit;f): ")
-                
+                user_input = input(
+                    "Enter command (exit, dir, file;'filename', dir;'directory_name', exit;f): "
+                )
+
                 if user_input.startswith("exit"):
                     if user_input == "exit":
                         break
@@ -158,8 +165,9 @@ class FlashObj:
 
                 elif user_input == "dir":
                     try:
-                        files = uos.listdir(self.flash_path)
-                        print(f"Contents of directory '{self.flash_path}':")
+                        dir_now = uos.getcwd()
+                        files = uos.listdir(dir_now)
+                        print(f"Contents of directory '/{dir_now}':")
                         for file in files:
                             print(file)
                     except OSError as e:
@@ -170,7 +178,7 @@ class FlashObj:
                     result = self.find_file_or_directory(filename, self.flash_path)
                     if result:
                         try:
-                            with open(result, 'r') as file:
+                            with open(result, "r") as file:
                                 content = file.read()
                                 print(f"Content of file '{result}':\n{content}")
                         except OSError as e:
@@ -179,11 +187,138 @@ class FlashObj:
                         print(f"File '{filename}' not found.")
 
                 elif user_input.startswith("dir;"):
-                    directory_name = user_input.split(";")[1].strip()
-                    print(self.get_directory_path(directory_name))
+                    try:
+                        directory_name = user_input.split(";")[1].strip()
+                        print(self.get_directory_path(directory_name))
+                    except OSError as e:
+                        print(f"Error : {e}")
+
+                elif user_input.startswith("cmd;"):
+                    try:
+                        command = user_input.split(";")[1].strip()
+                        print(self.str_to_code(command))
+                    except OSError as e:
+                        print(f"Error : {e}")
+
+                elif user_input.startswith("cdir;"):
+                    try:
+                        command = user_input.split(";")[1].strip()
+                        self.c_dir(command)
+
+                    except OSError as e:
+                        print(f"Error change dir : {e}")
+
+                elif user_input.startswith("cname;"):
+                    try:
+                        old_path0 = user_input.split(";")[1].strip()
+                        new_path0 = user_input.split(";")[2].strip()
+                        uos.rename(old_path=old_path0, new_path=new_path0)
+
+                    except OSError as e:
+                        print(f"Error change dir : {e}")
 
         except KeyboardInterrupt:
             print("\nInteractive terminal aborted.")
+
+    def c_dir(self, target_dir_name):
+        """
+        search the directory, print out the file path, and change to the related
+        directory
+        """
+        # looking for the directory from the root (default current path)
+        full_path0 = self.find_file_or_directory(
+            name=target_dir_name, search_directories=True
+        )
+        uos.chdir(full_path0)
+        print(f"now change to {uos.getcwd()}")
+
+        return full_path0
+
+    def str_to_code(self, string0="", *args, **kwargs):
+        """
+        function run for string command, also include the adjustment of 'TAB'
+        to prevent error for the operation
+        """
+        # # 231114, this is just testing string for the debugging
+        # string0 = '''self.print_debug(content=f'Grace went back home now', always_print0=1)'''
+
+        # 231114: add the reference dictionary to the exec function
+        self.str_code_ref = {"self": self}
+        # merge the self object with kwargs for cute Grace
+        self.str_code_ref.update(kwargs)
+
+        try:
+            # string0 = str(string0)
+            # textwrap => can't be used, give up and just for record
+            # string0 = textwrap.dedent(string0)
+
+            # there seems to have error
+            string0 = self.dedent(string0)
+            # res = exec(string0, globals(), self.str_code_ref)
+            # 24011 for the operation needed to have return, use eval
+            # to replace exec, exec is only have excution
+            res = eval(string0, globals(), self.str_code_ref)
+            return res
+            # self.execute_indented_code(string0)
+        except Exception as e:
+            self.print_debug(f"exception: {e}", always_print0=1)
+            # 231114: watchout! don't use try-except too early
+            # or you may not see the issue
+            self.print_debug(
+                content=f"there are some issue of exec() \n with string \n{string0}",
+                always_print0=1,
+            )
+        pass
+
+    def dedent(self, code):
+        lines = code.split("\n")
+        # 计算最小缩进
+        min_indent = float("inf")
+        for line in lines:
+            stripped = line.lstrip()
+            if stripped:
+                indent = len(line) - len(stripped)
+                min_indent = min(min_indent, indent)
+
+        # 移除最小缩进
+        dedented_lines = [line[min_indent:] for line in lines]
+        dedented_code = "\n".join(dedented_lines)
+        return dedented_code
+
+    def print_debug(self, content="", always_print0=0):
+        """
+        for the flash check only sim = 0 need to print
+        """
+        if self.sim_flash == 0:
+            print(content)
+            pass
+
+        pass
+
+    def list_all_files(self, directory="/", result=[], print0=1):
+        """Recursively list all files in the specified directory"""
+        try:
+            files = uos.listdir(self.flash_path + directory)
+            # print(files)
+            # result = []
+            for file in files:
+                file_path = f"{self.flash_path}{directory}/{file}"
+                if uos.stat(file_path)[0] & 0o170000 == 0o040000:
+                    # Check if it's a directory
+                    # result.append(f"{indent}{file}/")
+                    # Recursive call to list files in the subdirectory
+                    self.list_all_files(f"{directory}/{file}", result=result, print0=0)
+                else:
+                    result.append(f"{directory}/{file}")
+
+            if print0 == 1:
+                for i in result:
+                    print(i)
+            return result
+        except OSError as e:
+            return [f"Error listing files: {e}"]
+
+
 # Test FlashObj class functions
 flash_obj = FlashObj()
 
@@ -219,32 +354,41 @@ print(flash_obj.list_files())
 # Test remove_directory
 # Create test directories and files
 a = "/grace_try1"
-try: 
+try:
     uos.mkdir(a)
-except: 
-    print(f'err: {a}')
+except:
+    print(f"err: {a}")
     pass
 b = a + "/grace_try2"
-try: 
+try:
     uos.mkdir(b)
-except: 
-    print(f'err: {b}')
+except:
+    print(f"err: {b}")
     pass
 c = b + "/grace_try3"
-try: 
+try:
     uos.mkdir(c)
-except: 
-    print(f'err: {c}')
+except:
+    print(f"err: {c}")
     pass
-a = a + '/gary1.txt'
+a = a + "/gary1.txt"
 with open(a, "w") as file:
     file.write("Test file 1")
-b = b + '/gary2.txt'
+b = b + "/gary2.txt"
 with open(b, "w") as file:
     file.write("Test file 2")
-c = c + '/gary3.txt'
-with open(c, "w") as file:
+c1 = c + "/gary3.txt"
+with open(c1, "w") as file:
     file.write("Test file 3")
+c2 = c + "/gary4.txt"
+with open(c2, "w") as file:
+    file.write("Test file 4")
+
+flash_obj.list_all_files()
+
+# this need to be full path or just under current directory
+# uos.chdir("grace_try2")
+uos.chdir("grace_try1")
 
 flash_obj.interactive_terminal()
 

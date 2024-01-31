@@ -742,6 +742,7 @@ self.io_temp.value(self.io_state_lock)
 
             # there seems to have error
             string0 = self.dedent(string0)
+            # 240131 if need the return result of string, use "eval" to replace "exec"
             exec(string0, globals(), self.str_code_ref)
 
             # self.execute_indented_code(string0)

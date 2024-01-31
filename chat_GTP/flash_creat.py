@@ -132,3 +132,25 @@ remove_directory(new_directory_path)
 
 root_list = uos.listdir(root_dir)
 print(f'we have: "{root_list}" \n')
+
+import uos
+
+
+def list_all_recursive(directory):
+    try:
+        files_and_directories = uos.listdir(directory)
+        for item in files_and_directories:
+            full_path = uos.path.join(directory, item)
+            print(full_path)
+            try:
+                stat_result = uos.stat(full_path)
+                is_directory = stat_result[0] & 0x4000 == 0x4000
+                if is_directory:
+                    list_all_recursive(full_path)
+            except OSError as e:
+                print(f"Error checking {full_path}: {e}")
+    except OSError as e:
+        print(f"Error listing directory {directory}: {e}")
+
+
+list_all_recursive("/")
