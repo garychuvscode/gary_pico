@@ -10,8 +10,8 @@ class FlashObj:
         """(function: Check available space on the flash)"""
         try:
             space = uos.statvfs(self.flash_path + "flash")
-            total_space = space[0] * space[3]
-            free_space = space[0] * space[4]
+            total_space = space[0] * space[2]
+            free_space = space[0] * space[3]
             return f"Total Space: {total_space} bytes, Free Space: {free_space} bytes"
         except OSError as e:
             return f"Error checking space: {e}"
@@ -87,18 +87,24 @@ class FlashObj:
     def remove_directory(self, directory):
         """(function: Recursively remove a directory and its contents, parameters: directory - name of the directory)"""
         try:
-            directory_path = f"{self.flash_path}/{directory}"
+            directory_path = f"{self.flash_path}{directory}"
             files = uos.listdir(directory_path)
             for file in files:
+                
                 file_path = f"{directory_path}/{file}"
+                print(f'now is file: {file} in path: {file_path}')
                 if (
                     uos.stat(file_path)[0] & 0o170000 == 0o040000
                 ):  # Check if it's a directory
                     self.remove_directory(f"{directory}/{file}")
                 else:
                     uos.remove(file_path)
+                    # add '/' in front of the path : since the root is '/'
+                    print(f'remove file: /{file_path} done')
             uos.rmdir(directory_path)
-            return f"Directory '{directory_path}' removed successfully."
+            # add '/' in front of the path : since the root is '/'
+            print(f'remove directory: /{directory_path} done')
+            return f"Directory '/{directory_path}' removed successfully."
         except OSError as e:
             return f"Error removing directory: {e}"
 
@@ -106,11 +112,78 @@ class FlashObj:
         """(function: Get the current working directory)"""
         try:
             current_directory = uos.getcwd()
+            print(f'currently in : "{current_directory}"')
             return current_directory
         except OSError as e:
             return f"Error getting current working directory: {e}"
 
 
+    def find_file_or_directory(self, name, current_path, search_directories=False):
+        '''(function: Recursively find file or directory in the given path)'''
+        try:
+            files = uos.listdir(current_path)
+            for file in files:
+                file_path = f"{current_path}/{file}"
+                if uos.stat(file_path)[0] & 0o170000 == 0o040000:  # Check if it's a directory
+                    if search_directories and file == name:
+                        return file_path
+                    result = self.find_file_or_directory(name, file_path, search_directories)
+                    if result:
+                        return result
+                elif not search_directories and file == name:
+                    return file_path
+        except OSError as e:
+            print(f"Error finding file or directory: {e}")
+        return None
+
+    def get_directory_path(self, directory_name):
+        '''(function: Get the path of the specified directory in Flash)'''
+        result = self.find_file_or_directory(directory_name, self.flash_path, search_directories=True)
+        if result:
+            return f"The path of directory '{directory_name}' is: {result}"
+        else:
+            return f"Directory '{directory_name}' not found."
+
+    def interactive_terminal(self):
+        '''(function: Interactive terminal for browsing directories and viewing files)'''
+        try:
+            while True:
+                user_input = input("Enter command (exit, dir, file; 'filename', dir; 'directory_name', exit;f): ")
+                
+                if user_input.startswith("exit"):
+                    if user_input == "exit":
+                        break
+                    elif user_input == "exit;f":
+                        return user_input.split(";")[1].strip()
+
+                elif user_input == "dir":
+                    try:
+                        files = uos.listdir(self.flash_path)
+                        print(f"Contents of directory '{self.flash_path}':")
+                        for file in files:
+                            print(file)
+                    except OSError as e:
+                        print(f"Error listing directory: {e}")
+
+                elif user_input.startswith("file;"):
+                    filename = user_input.split(";")[1].strip()
+                    result = self.find_file_or_directory(filename, self.flash_path)
+                    if result:
+                        try:
+                            with open(result, 'r') as file:
+                                content = file.read()
+                                print(f"Content of file '{result}':\n{content}")
+                        except OSError as e:
+                            print(f"Error reading file: {e}")
+                    else:
+                        print(f"File '{filename}' not found.")
+
+                elif user_input.startswith("dir;"):
+                    directory_name = user_input.split(";")[1].strip()
+                    print(self.get_directory_path(directory_name))
+
+        except KeyboardInterrupt:
+            print("\nInteractive terminal aborted.")
 # Test FlashObj class functions
 flash_obj = FlashObj()
 
@@ -118,7 +191,7 @@ flash_obj = FlashObj()
 print(flash_obj.space_check())
 
 # Test read_file
-print(flash_obj.read_file("example.txt"))
+print(flash_obj.read_file("new_file.txt"))
 
 # Test write_file
 print(flash_obj.write_file("new_file.txt", "Hello, Flash!"))
@@ -146,20 +219,41 @@ print(flash_obj.list_files())
 # Test remove_directory
 # Create test directories and files
 a = "/grace_try1"
-uos.mkdir(a)
-b = a + "grace_try2"
-uos.mkdir(b)
-c = b + "grace_try3"
-uos.mkdir(c)
+try: 
+    uos.mkdir(a)
+except: 
+    print(f'err: {a}')
+    pass
+b = a + "/grace_try2"
+try: 
+    uos.mkdir(b)
+except: 
+    print(f'err: {b}')
+    pass
+c = b + "/grace_try3"
+try: 
+    uos.mkdir(c)
+except: 
+    print(f'err: {c}')
+    pass
+a = a + '/gary1.txt'
 with open(a, "w") as file:
     file.write("Test file 1")
+b = b + '/gary2.txt'
 with open(b, "w") as file:
     file.write("Test file 2")
+c = c + '/gary3.txt'
 with open(c, "w") as file:
     file.write("Test file 3")
+
+flash_obj.interactive_terminal()
+
+
 print(flash_obj.remove_directory("grace_try1"))
 # print(flash_obj.remove_directory("grace_try2"))
 # print(flash_obj.remove_directory("grace_try3"))
 
 # Test getcwd
 print(flash_obj.getcwd())
+# Test list_files
+print(flash_obj.list_files())
