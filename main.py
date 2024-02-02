@@ -446,20 +446,17 @@ class pico_emb():
         relay control method: need to add programmable delay between switching
         default 20, change by grace(engineering mode)
         '''
-        if t_dly_s == 0:
-            # no input, internal delay settings
-            # self.relay_dly can't be used in the definition of function
-            t_dly_s = self.relay_dly
-        else:
-            # pass, use input setting
-            pass
+        if t_dly_s != 0:
+            # change settings if there are input
+            self.relay_dly = t_dly_s
+
 
         # reset active relay channel, skip if ch_ind is 100
         if self.active_relay_ch != 100:
             # reset the relay channel
             self.relay_ref_array[int(self.active_relay_ch)].value(0)
 
-        time.sleep(t_dly_s)
+        time.sleep(self.relay_dly)
 
         # update turn off index
         self.active_relay_ch = channel_index
