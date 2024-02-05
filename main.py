@@ -213,7 +213,8 @@ class pico_emb():
         if self.sim_mcu == 1 and always_print0 == 1 :
             # real mode change output to the debug bus
             # 240117 change to print all in UART and sim_mcu = 2 allow print to USB COM
-            self.uart1.write(content)
+            # self.uart1.write(content)
+            pass
         elif self.sim_mcu == 2:
             # pico connect and need to check termainal
             self.uart1.write(content)
@@ -249,19 +250,12 @@ class pico_emb():
         deifnition of command
 
         fromat:
-        i2c;{device-XX};{register-XX};{r_read/w_write};{data-[1,2,3,4,5] or length-x}
-        pwm;{frequency-Hz};{duty-%};{en-0 or 1}
-        pio;{number- EN, SW};
+        i2c;{device-XX};{register-XX};{r_read/w_write};{length-x or data-[1,2,3,4,5]}
+        pwm;{frequency-kHz};{duty-%};{type-0(duty) or 1(ns)};{channel 0(PWM0) or 1(PWM1)}
+        pio;{number- 6(EN), 7(SW)};{pulse_count(<255)}
         gio;{number- 0 to 9};{status- 0_off, 1_on}
-        gio;{number};{status-1 or 0}
-        en_mode;{1-4}
-        rly;{channel_active}
-
-        # mode sequence: 1-4: (EN, SW) = (0, 0),  (0, 1), (1, 0), (1, 1) => default normal
-        # pwm;
-        # gio;8;1
-
-        note: pio 0-9 only support 100us or longer step
+        en_mode;{(EN,SW) or (EN2, EN1) => 1:(0,0); 2:(0,1); 3:(1,0); 4:(1,1)}
+        rly;{channel_active- 0 to 9}
 
         '''
         pass
@@ -525,12 +519,13 @@ class pico_emb():
 
         pass
 
-    def io_pulse_gen(self, pulse_amount0=1, pulse_type0='LOW', duration_100us=1, num0=0):
+    def io_pulse_gen(self, pulse_amount0=1, pulse_type0='LOW', duration_set=0, num0=0):
         '''
         num0 = io_ind or pio(en_ind, sw_ind), both are ok
         by using loop to IO command generate the pulse output
         the minimum duration is 100us (1 counter 100us)
         => 231113 change to use different functino for gio and pio
+        240205: duration_set = 0 => 10us pulse
 
         '''
 
@@ -548,7 +543,10 @@ class pico_emb():
         delay command cause 5us @ 250MHz
         '''
 
-        self.us100_counter_cal =0
+        self.us_counter_cal = 0
+        if duration_set != 0 :
+            # change the duration to 100us
+            self.us_counter_cal = 85
 
         if self.sim_mcu == 1 :
             self.io_state0 = self.io_temp.value()
@@ -576,15 +574,15 @@ class pico_emb():
             self.io_temp.value(self.io_state_lock)
 
             # == pulse element
-            time.sleep_us(self.us100_counter_cal)
+            time.sleep_us(self.us_counter_cal)
             self.io_temp.value(self.io_tran)
-            time.sleep_us(self.us100_counter_cal)
+            time.sleep_us(self.us_counter_cal)
             self.io_temp.value(self.io_state_lock)
             '''
 
-            single_pulse = '''time.sleep_us(self.us100_counter_cal)
+            single_pulse = '''time.sleep_us(self.us_counter_cal)
 self.io_temp.value(self.io_tran)
-time.sleep_us(self.us100_counter_cal)
+time.sleep_us(self.us_counter_cal)
 self.io_temp.value(self.io_state_lock)
 '''
             self.print_debug(f'the single pulse command is {single_pulse}')
@@ -818,9 +816,13 @@ self.io_temp.value(self.io_state_lock)
                     pass
                 elif self.cmd_array[0] == 'pio' :
                     '''
+                    240205 first version of PIO is just low pulse output (glitch can only be done
+                    by the JIGM3 tool, since the pattern is't ready yet)
                     '''
+
+                    self.io_pulse_gen(pulse_amount0=int(self.cmd_array[2]), pulse_type0='LOW', duration_set=1, num0=int(self.cmd_array[1]))
                     # return item below
-                    print(f'Grace_say_comming_soon')
+                    print(f'Grace_say_other_comming_soon, now only 10us low pulse')
                     pass
                 elif self.cmd_array[0] == 'pwm' :
                     self.pwm_ctrl(freq0=float(self.cmd_array[1]),duty0=float(self.cmd_array[2]),type0=int(self.cmd_array[3]),ch0=int(self.cmd_array[4]))
@@ -876,7 +878,7 @@ self.io_temp.value(self.io_state_lock)
                         # 231115 wait for scope check for calibration
                         self.io_change(num0='0',status0=1)
                         self.print_debug('enter pattern gen test')
-                        self.io_pulse_gen(pulse_amount0=10, pulse_type0='LOW', duration_100us=1, num0=0)
+                        self.io_pulse_gen(pulse_amount0=10, pulse_type0='LOW', duration_set=1, num0=0)
                         pass
                     if self.cmd_array[1] == 'i' :
                         # i2c mode
