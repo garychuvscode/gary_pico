@@ -1,0 +1,35 @@
+MicroPython社群中有許多常用的庫，它們提供了各種功能，從硬體控制到網路通信。以下是一些常見的MicroPython庫：
+
+machine： MicroPython的核心庫之一，提供了與硬體交互的功能，如控制腳、PWM、ADC等。
+
+network： 提供了網路相關的功能，包括Wi-Fi和Socket支援。
+
+utime： 提供時間和計時相關的功能，例如延遲、定時器等。
+
+ujson： 用於處理JSON格式的庫，支援JSON數據的解析和生成。
+
+usocket： 提供簡單的Socket支援，用於網路通信。
+
+uasyncio： MicroPython的非同步IO庫，支援簡單的事件循環。
+
+ujson： 提供了JSON數據的解析和生成。
+
+ucollections： 包含一些常見的集合類型，如OrderedDict。
+
+umqtt.simple： 簡單的MQTT（Message Queuing Telemetry Transport）客戶端實現。
+
+uio： 提供類似Python的I/O操作。
+
+ubinascii： 提供二進制數據和ASCII字符之間的轉換。
+
+ucrypto： 提供加密算法，如SHA、MD5等。
+
+uheapq： 堆（heap）的實現，用於優先級隊列。
+
+ussl： 提供SSL/TLS支援。
+
+framebuf： 在顯示屏上進行簡單的圖形繪製。
+
+neopixel： 用於控制NeoPixel（WS2812）等LED燈帶的庫。
+
+這只是一小部分常見的MicroPython庫，實際上有很多其他庫，覆蓋了各種應用領域。你可以在MicroPython的官方文檔、GitHub、以及MicroPython社群中查找更多的庫。
