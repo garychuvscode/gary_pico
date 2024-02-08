@@ -13,6 +13,7 @@ class FlashObj:
             space = uos.statvfs(self.flash_path + "flash")
             total_space = space[0] * space[2]
             free_space = space[0] * space[3]
+            print(f'what we have: {space}')
             return f"Total Space: {total_space} bytes, Free Space: {free_space} bytes"
         except OSError as e:
             return f"Error checking space: {e}"
@@ -348,78 +349,82 @@ if __name__ == "__main__":
 
     flash_obj.list_all_files()
 
-    # Test write_file
-    print(flash_obj.write_file("new_file.txt", "Hello, Flash!"))
+    print(f'we have : {flash_obj.list_files()}')
 
-    # Test read_file
-    print(flash_obj.read_file("new_file.txt"))
+    print(f'we have2 : {uos.statvfs("/")}')
 
-    # Test write_file_append
-    print(flash_obj.write_file_append("existing_file.txt", "\nAdditional content."))
+    # # Test write_file
+    # print(flash_obj.write_file("new_file.txt", "Hello, Flash!"))
 
-    # Test write_file_with_separator
-    print(
-        flash_obj.write_file_with_separator(
-            "file_with_separator.txt", "Content with separator"
-        )
-    )
+    # # Test read_file
+    # print(flash_obj.read_file("new_file.txt"))
 
-    # Test write_file_with_timestamp
-    print(
-        flash_obj.write_file_with_timestamp(
-            "file_with_timestamp.txt", "Content with timestamp"
-        )
-    )
+    # # Test write_file_append
+    # print(flash_obj.write_file_append("existing_file.txt", "\nAdditional content."))
 
-    # Test list_files
-    print(flash_obj.list_files())
+    # # Test write_file_with_separator
+    # print(
+    #     flash_obj.write_file_with_separator(
+    #         "file_with_separator.txt", "Content with separator"
+    #     )
+    # )
 
-    # Test remove_directory
-    # Create test directories and files
-    a = "/grace_try1"
-    try:
-        uos.mkdir(a)
-    except:
-        print(f"err: {a}")
-        pass
-    b = a + "/grace_try2"
-    try:
-        uos.mkdir(b)
-    except:
-        print(f"err: {b}")
-        pass
-    c = b + "/grace_try3"
-    try:
-        uos.mkdir(c)
-    except:
-        print(f"err: {c}")
-        pass
-    a = a + "/gary1.txt"
-    with open(a, "w") as file:
-        file.write("Test file 1")
-    b = b + "/gary2.txt"
-    with open(b, "w") as file:
-        file.write("Test file 2")
-    c1 = c + "/gary3.txt"
-    with open(c1, "w") as file:
-        file.write("Test file 3")
-    c2 = c + "/gary4.txt"
-    with open(c2, "w") as file:
-        file.write("Test file 4")
+    # # Test write_file_with_timestamp
+    # print(
+    #     flash_obj.write_file_with_timestamp(
+    #         "file_with_timestamp.txt", "Content with timestamp"
+    #     )
+    # )
 
-    flash_obj.list_all_files()
+    # # Test list_files
+    # print(flash_obj.list_files())
 
-    # this need to be full path or just under current directory
-    # uos.chdir("grace_try2")
-    uos.chdir("/grace_try1")
+    # # Test remove_directory
+    # # Create test directories and files
+    # a = "/grace_try1"
+    # try:
+    #     uos.mkdir(a)
+    # except:
+    #     print(f"err: {a}")
+    #     pass
+    # b = a + "/grace_try2"
+    # try:
+    #     uos.mkdir(b)
+    # except:
+    #     print(f"err: {b}")
+    #     pass
+    # c = b + "/grace_try3"
+    # try:
+    #     uos.mkdir(c)
+    # except:
+    #     print(f"err: {c}")
+    #     pass
+    # a = a + "/gary1.txt"
+    # with open(a, "w") as file:
+    #     file.write("Test file 1")
+    # b = b + "/gary2.txt"
+    # with open(b, "w") as file:
+    #     file.write("Test file 2")
+    # c1 = c + "/gary3.txt"
+    # with open(c1, "w") as file:
+    #     file.write("Test file 3")
+    # c2 = c + "/gary4.txt"
+    # with open(c2, "w") as file:
+    #     file.write("Test file 4")
 
-    flash_obj.interactive_terminal()
+    # flash_obj.list_all_files()
 
-    # print(flash_obj.remove_directory("grace_try1"))
-    # print(flash_obj.remove_directory("grace_try2"))
-    # print(flash_obj.remove_directory("grace_try3"))
+    # # this need to be full path or just under current directory
+    # # uos.chdir("grace_try2")
+    # uos.chdir("/grace_try1")
 
-    # Test getcwd
-    print(flash_obj.getcwd())
-    # Test list_files
-    print(flash_obj.list_files())
+    # flash_obj.interactive_terminal()
+
+    # # print(flash_obj.remove_directory("grace_try1"))
+    # # print(flash_obj.remove_directory("grace_try2"))
+    # # print(flash_obj.remove_directory("grace_try3"))
+
+    # # Test getcwd
+    # print(flash_obj.getcwd())
+    # # Test list_files
+    # print(flash_obj.list_files())
