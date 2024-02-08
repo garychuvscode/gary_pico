@@ -820,7 +820,7 @@ self.io_temp.value(self.io_state_lock)
                     by the JIGM3 tool, since the pattern is't ready yet)
                     '''
 
-                    self.io_pulse_gen(pulse_amount0=int(self.cmd_array[2]), pulse_type0='LOW', duration_set=1, num0=int(self.cmd_array[1]))
+                    self.io_pulse_gen(pulse_amount0=int(self.cmd_array[2]), pulse_type0='LOW', duration_set=0, num0=int(self.cmd_array[1]))
                     # return item below
                     print(f'Grace_say_other_comming_soon, now only 10us low pulse')
                     pass
