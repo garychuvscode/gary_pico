@@ -18,12 +18,18 @@ only used for main program development
 
 """
 
+
+
+
+
 # default frequency 150MHz
 f_now = machine.freq()
 # print(f"requency now is: {f_now}")
 machine.freq(250000000)
 # print(machine.freq())
 
+# 240213: add the import of module
+import pio_ws2812_obj as rgb_led
 
 
 # 0 is simulation mode (work with teriminal, or USB COM)=> print all

@@ -22,7 +22,7 @@ def ws2812():
     wrap()
 
 # 創建 StateMachine 對象，將 ws2812 程序傳遞給它，並配置 PIO 的一些參數
-sm = rp2.StateMachine(0, ws2812, freq=8_000_000, sideset_base=Pin(23))
+sm = rp2.StateMachine(1, ws2812, freq=8_000_000, sideset_base=Pin(23))
 
 # 啟動 StateMachine，準備接收 FIFO 中的數據
 sm.active(1)
@@ -46,17 +46,19 @@ if __name__ == '__main__':
 
         # 主循環，設置 LED 的顏色
         while True:
-            # 根據給定的紅、綠和藍值，計算出顏色數據
-            red = int(input("Enter red value (0-255): "))
-            green = int(input("Enter green value (0-255): "))
-            blue = int(input("Enter blue value (0-255): "))
+            # 對於每一顆 LED
+            for led_index in range(NUM_LEDS):
+                # 根據給定的紅、綠和藍值，計算出顏色數據
+                red = int(input(f"Enter red value for LED {led_index + 1} (0-255): "))
+                green = int(input(f"Enter green value for LED {led_index + 1} (0-255): "))
+                blue = int(input(f"Enter blue value for LED {led_index + 1} (0-255): "))
             
-            # 將紅、綠、藍值組合成一個顏色數據，按照 WS2812 的順序排列
-            color = (green << 16) | (red << 8) | blue
-            
-            # 將顏色數據放入 array 中
-            ar[0] = color
-            print(ar)
+                # 將紅、綠、藍值組合成一個顏色數據，按照 WS2812 的順序排列
+                color = (green << 16) | (red << 8) | blue
+                
+                # 將顏色數據放入 array 中
+                ar[led_index] = color
+                print(ar)
             
             # 將 array 放入 StateMachine 的 FIFO 中，從而將顏色數據發送到 WS2812 LED
             sm.put(ar, 8)
@@ -129,7 +131,7 @@ if __name__ == '__main__':
                     color = (green << 16) | (red << 8) | blue
                     ar[0] = color
                     sm.put(ar, 8)
-                    time.sleep_ms(10)  # 等待一小段時間，使顏色變化不要太快
+                    time.sleep_ms(30)  # 等待一小段時間，使顏色變化不要太快
             
             # 從 (255, 255, 255) 到 (0, 0, 0)
             for color_value in range(255, -1, -1):
@@ -140,4 +142,4 @@ if __name__ == '__main__':
                     color = (green << 16) | (red << 8) | blue
                     ar[0] = color
                     sm.put(ar, 8)
-                    time.sleep_ms(10)  # 等待一小段時間，使顏色變化不要太快
+                    time.sleep_ms(30)  # 等待一小段時間，使顏色變化不要太快
