@@ -21,7 +21,7 @@
  e-mail:- muthuswamy.pugazhendi@gmail.com
 '''
 from machine import Pin, SPI
-import sdcard
+import chat_GTP.sdcard_V0 as sdcard_V0
 # the os in micropython is usos
 import uos as os
 import machine
@@ -33,7 +33,7 @@ def BlinkLED(timer_one):
     led.toggle()
 # Initialize the SD card
 spi=SPI(1,baudrate=40000000,sck=Pin(10),mosi=Pin(11),miso=Pin(12))
-sd=sdcard.SDCard(spi,Pin(13))
+sd=sdcard_V0.SDCard(spi,Pin(13))
 # Create a instance of MicroPython Unix-like Virtual File System (VFS),
 vfs=os.VfsFat(sd)
  

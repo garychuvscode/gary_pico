@@ -56,7 +56,7 @@ class ws2812_LED ():
         '''
         self.ar = array.array("I", [0])
 
-    def set_LED(self, red=0, green=5, blue=0, led_index=0): 
+    def set_LED(self, red=0, green=1, blue=0, led_index=0): 
         '''
         update the input setting for the LED 
         short the R68 for YD2040
