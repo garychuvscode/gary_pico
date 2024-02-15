@@ -52,6 +52,9 @@ class pico_emb():
         self.sim_args = []
         self.sim_kwargs = []
 
+        # 将引脚设置为默认上拉 (only for YD2040)
+        # self.button_in = Pin(24, Pin.IN, Pin.PULL_UP)
+
         # ===== the only LDE on PICO, reserve for LED
         self.led = machine.Pin(25, machine.Pin.OUT)
 
