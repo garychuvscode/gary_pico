@@ -4,10 +4,10 @@ import time
 
 from machine import Pin
 
-led = Pin(15, Pin.OUT)
+led = Pin(25, Pin.OUT)
 
-ssid = 'YOUR NETWORK NAME'
-password = 'YOUR NETWORK PASSWORD'
+ssid = 'PY Chu'
+password = '0294475990'
 
 # Initialize stateis variable with default value
 stateis = "LED is OFF"
@@ -18,8 +18,13 @@ wlan.connect(ssid, password)
 
 html = """<!DOCTYPE html>
 <html>
-    <head> <title>Pico W</title> </head>
-    <body> <h1>Pico W</h1>
+    <head>
+        <title>Pico W</title>
+    </head>
+    <body>
+        <h1>Pico W</h1>
+        <button onclick="location.href='/light/on'">LED On</button>
+        <button onclick="location.href='/light/off'">LED Off</button>
         <p>%s</p>
     </body>
 </html>
@@ -38,7 +43,7 @@ if wlan.status() != 3:
 else:
     print('connected')
     status = wlan.ifconfig()
-    print( 'ip = ' + status[0] )
+    print('ip = ' + status[0])
 
 addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
 
@@ -47,6 +52,9 @@ s.bind(addr)
 s.listen(1)
 
 print('listening on', addr)
+
+# Initialize stateis variable with default value
+stateis = "Unknown"
 
 # Listen for connections
 while True:
@@ -59,16 +67,17 @@ while True:
         request = str(request)
         led_on = request.find('/light/on')
         led_off = request.find('/light/off')
-        print( 'led on = ' + str(led_on))
-        print( 'led off = ' + str(led_off))
+        print('led on = ' + str(led_on))
+        print('led off = ' + str(led_off))
 
-        if led_on == 6:
-            print("led on")
+        # Toggle LED based on request URL
+        if led_on != -1:
+            print("Toggle LED on")
             led.value(1)
             stateis = "LED is ON"
 
-        if led_off == 6:
-            print("led off")
+        if led_off != -1:
+            print("Toggle LED off")
             led.value(0)
             stateis = "LED is OFF"
 
