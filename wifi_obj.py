@@ -11,6 +11,9 @@ class WiFiControl:
         self.password = password
         self.led = Pin("LED", Pin.OUT)
         self.stateis = "LED is OFF"
+        # this varaible used to define if there are change in 
+        # command or what command change 
+        self.cmd_status = ''
 
     @staticmethod
     def html_config(state):
@@ -21,8 +24,8 @@ class WiFiControl:
             </head>
             <body>
                 <h1>Pico W</h1>
-                <button onclick="location.href='/light_on'">LED On</button>
-                <button onclick="location.href='/light_off'">LED Off</button>
+                <button onclick="location.href='light_on'">LED On</button>
+                <button onclick="location.href='light_off'">LED Off</button>
                 <p>{}</p>
             </body>
         </html>
@@ -53,6 +56,20 @@ class WiFiControl:
             print("connected")
             status = wlan.ifconfig()
             print("ip =", status[0])
+            pass 
+
+        pass 
+
+    def str_selection_row(self, decoded_str, row_number):
+        # 將解碼後的字串按行分割成列表
+        lines = decoded_str.split('\n')
+        
+        # 檢查行號是否有效
+        if row_number < 0 or row_number >= len(lines):
+            return ''
+        
+        # 返回指定行的內容
+        return str(lines[row_number])
 
     def wifi_main(self):
         addr = socket.getaddrinfo("0.0.0.0", 80)[0][-1]
@@ -65,28 +82,40 @@ class WiFiControl:
                 cl, addr = s.accept()
                 print("client connected from", addr)
                 request = cl.recv(1024).decode("utf-8")
+                request = self.str_selection_row(request, 0)
                 print(f'request is :\n{request}\n')
                 if self.stateis == "LED is OFF":
-                    led_on = request.find("/light_on")
+                    # check if turn on needed when it's off
+                    led_on = request.find("light_on")
                     # this will cause searching error, don't use this one
                     # need to change at the search side also
                     # led_on = request.find("/light/on")
                     led_off = -1
                 if self.stateis == "LED is ON":
-                    led_off = request.find("/light_off")
+                    # check if turn off needed when it's on
+                    led_off = request.find("light_off")
                     # led_on = request.find("/light/off")
                     led_on = -1
-                print("led on =", led_on)
-                print("led off =", led_off)
+                print("led on check =", led_on)
+                print("led off check =", led_off)
                 if led_on != -1:
                     print("Toggle LED on")
                     self.led.value(1)
                     self.stateis = "LED is ON"
+                    self.cmd_status = "from 0 to 1"
+
                 if led_off != -1:
                     print("Toggle LED off")
                     self.led.value(0)
                     self.stateis = "LED is OFF"
-                response = self.html_config(self.stateis)
+                    self.cmd_status = "from 1 to 0"
+
+                if led_on== -1 and led_off == -1 : 
+                    print("status not change")
+                    self.cmd_status = 'LED not change'
+                    
+                
+                response = self.html_config(f'now {self.stateis}, and {self.cmd_status}')
                 cl.send("HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n")
                 cl.send(response)
                 cl.close()
