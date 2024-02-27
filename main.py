@@ -126,7 +126,7 @@ class pico_emb():
 
         # ===== relay control configuration
         # relay array, need to have sequence define in source code
-        self.relay_ind = [16, 17, 18, 19, 20, 21, 22, 26, 27, 28]
+        self.relay_ind = [14, 15, 20, 21, 22, 26, 27, 28, 4, 5]
         # status of the IO can be read directly from the => pin_status = pin.value()
         self.relay0 = machine.Pin(self.relay_ind[0], machine.Pin.OUT)
         self.relay1 = machine.Pin(self.relay_ind[1], machine.Pin.OUT)
@@ -956,5 +956,32 @@ self.io_temp.value(self.io_state_lock)
 pico_grace= pico_emb(sim_mcu0=sim_mode)
 # pico_grace.pico_emb_main()
 # pico_grace.debug_led(num0=1, value0=1, all=1)
+testmode = 2
+
+
+if testmode == 1:
+    # relay toggle testing
+    while 1 :
+        test_x = 0
+        for test_a in range (0, 8):
+            pico_grace.relay_ctrl(test_a)
+            time.sleep_ms(400)
+            # x=input()
+
+        time.sleep_ms(1000)
+elif testmode == 2:
+    # IO testing
+    while 1 :
+        test_x = 0
+        for test_a in range (0, 8):
+            pico_grace.io_change(num0=f'{int(test_a)}', status0=1)
+            time.sleep_ms(400)
+            pico_grace.io_change(num0=f'{int(test_a)}', status0=0)
+            time.sleep_ms(400)
+            x=input()
+        time.sleep_ms(1000)
+
+
+
 
 pico_grace.pico_emb_main()
