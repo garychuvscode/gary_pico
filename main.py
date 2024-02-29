@@ -164,6 +164,9 @@ class pico_emb():
         # default setting for the MCU
         self.io_reset(ind_type0='io', pio_reset=0)
         self.pmic_mode()
+        self.w_led = rgb_led.ws2812_LED()
+        # bring the default LED to make sure LED_obj works fine
+        self.w_led.set_LED()
 
     def led_toggle(self, duration=0.1):
         '''
@@ -956,7 +959,7 @@ self.io_temp.value(self.io_state_lock)
 pico_grace= pico_emb(sim_mcu0=sim_mode)
 # pico_grace.pico_emb_main()
 # pico_grace.debug_led(num0=1, value0=1, all=1)
-testmode = 2
+testmode = 0
 
 
 if testmode == 1:
