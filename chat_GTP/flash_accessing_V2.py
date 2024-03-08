@@ -1,6 +1,7 @@
 import uos
 import utime
 
+# fmt: off
 
 class FlashObj:
     def __init__(self, flash_path="/"):

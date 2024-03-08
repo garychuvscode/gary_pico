@@ -28,8 +28,27 @@ f_now = machine.freq()
 machine.freq(250000000)
 # print(machine.freq())
 
-# 240213: add the import of module
+# ==== 240213: add the import of module
+'''
+this is the led module of YD-2040 using GPIO23 as LED control
+GPIO23 will also be reserve in the original PICO for competible with add
+hardware
+'''
 import pio_ws2812_obj as rgb_led
+
+
+'''
+difference between pico, pico W and YD-2040
+YD-2040:
+> need to connect R68 and Vref for the LED and ADC
+> GPIO23 => LED, GPIO24 => user button
+> Run => RST button
+PICO:
+> GPIO23 => PFM, PWM selection, GPIO24 => Input bus detection
+PICO W:
+'''
+
+
 
 
 # 0 is simulation mode (work with teriminal, or USB COM)=> print all
@@ -789,9 +808,13 @@ self.io_temp.value(self.io_state_lock)
 
             if pwr_signal == 0 :
                 # power up before wait command, toggle LED for PWR up
+                self.w_led.set_LED(red=1,green=0,blue=0)
                 self.led_toggle(duration=0.3)
+                self.w_led.set_LED(red=0,green=1,blue=0)
                 self.led_toggle(duration=0.3)
+                self.w_led.set_LED(red=0,green=0,blue=1)
                 self.led_toggle(duration=0.3)
+                self.w_led.set_LED(red=0,green=1,blue=0)
                 pwr_signal = 1
 
             self.wait_cmd()
