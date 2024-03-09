@@ -3,11 +3,19 @@ import time
 from machine import Pin
 import rp2
 import machine
+
+import device_info
      
 
+# fmt: off
 class ws2812_LED (): 
 
     def __init__(self, gpio0=23, pio_block0=0, num_LED0=1, sim_mode0=1):
+        '''
+        since there are YD2040 board have ws2812LED
+        other board set sim_mode to 0 , disable all the function and become no action 
+        and prevent error 
+        '''
 
         # general initial items 
 
@@ -47,8 +55,31 @@ class ws2812_LED ():
         self.ar = array.array("I", [0])
 
 
+
         # end of initialization
         pass 
+
+    def board_check(self): 
+        '''
+        enable device id check to preven error of using ws2182 
+        only in main object need to use this function, for ws2182 single control
+        no need to call for this function 
+        '''
+        # 240310 device info check for sim_mode adjustment 
+        try: 
+            if device_info.device_index != 3 :
+                # don't have ws2812 on this control, disable all the LED control
+                # to prevent error 
+                self.print_debug(f'device infor check done and disable system ws2812', always_print0=1)
+
+                self.sim_mode = 0 
+                pass 
+        except Exception as e : 
+            print(f'error of ws2182 detection with error: {e}')
+            pass 
+
+        self.print_debug(f'device infor check done sim_mode = "{self.sim_mode}" for this ws2812 object',always_print0=1)
+
 
     def reset_led_array(self): 
         '''
@@ -62,23 +93,29 @@ class ws2812_LED ():
         short the R68 for YD2040
         led_index => default is 1 LED, index 0 
         '''
-        self.reset_led_array()
 
-        if red < 255 or green < 255 or blue < 255 : 
+        if self.sim_mode != 0 : 
+
+            self.reset_led_array()
+
+            if red < 255 or green < 255 or blue < 255 : 
+                    
+                # 將紅、綠、藍值組合成一個顏色數據，按照 WS2812 的順序排列
+                color = (green << 16) | (red << 8) | blue
                 
-            # 將紅、綠、藍值組合成一個顏色數據，按照 WS2812 的順序排列
-            color = (green << 16) | (red << 8) | blue
-            
-            # 將顏色數據放入 array 中
-            # 240213: the case of more than 1 LED, need to double check in experiment
-            self.ar[led_index] = color
-            # print(self.ar)
+                # 將顏色數據放入 array 中
+                # 240213: the case of more than 1 LED, need to double check in experiment
+                self.ar[led_index] = color
+                # print(self.ar)
 
-            # 將 array 放入 StateMachine 的 FIFO 中，從而將顏色數據發送到 WS2812 LED
-            self.sm.put(self.ar, 8)
+                # 將 array 放入 StateMachine 的 FIFO 中，從而將顏色數據發送到 WS2812 LED
+                self.sm.put(self.ar, 8)
 
-            # 等待一段時間，以便觀察 LED 的顏色
-            # time.sleep_ms(50)
+                # 等待一段時間，以便觀察 LED 的顏色
+                # time.sleep_ms(50)
+                pass 
+
+            # end if 
             pass 
 
         pass 
@@ -91,56 +128,61 @@ class ws2812_LED ():
         default sim_mode set to 1 => the real mode 
         '''
 
-        # reset the array every time call for set LED 
-        self.reset_led_array()
+        if self.sim_mode != 0 : 
 
-        # 主循環，設置 LED 的顏色
-        while True:
+            # reset the array every time call for set LED 
+            self.reset_led_array()
 
-            try: 
-                # 對於每一顆 LED
-                for led_index in range(self.NUM_LEDS):
-                    # 根據給定的紅、綠和藍值，計算出顏色數據
-                    break0 = 0 
-                    red = int(input(f"Enter red value for LED {led_index + 1} (0-255): "))
-                    green = int(input(f"Enter green value for LED {led_index + 1} (0-255): "))
-                    blue = int(input(f"Enter blue value for LED {led_index + 1} (0-255): "))
+            # 主循環，設置 LED 的顏色
+            while True:
 
-                    if red > limit0 or green > limit0 or blue > limit0 : 
-                        break0 = 1 
-                        # set the break command and break the for loop with update
-                        # this also include the overflow, it will become 0 
-                        break
+                try: 
+                    # 對於每一顆 LED
+                    for led_index in range(self.NUM_LEDS):
+                        # 根據給定的紅、綠和藍值，計算出顏色數據
+                        break0 = 0 
+                        red = int(input(f"Enter red value for LED {led_index + 1} (0-255): "))
+                        green = int(input(f"Enter green value for LED {led_index + 1} (0-255): "))
+                        blue = int(input(f"Enter blue value for LED {led_index + 1} (0-255): "))
 
-                
-                    # 將紅、綠、藍值組合成一個顏色數據，按照 WS2812 的順序排列
-                    color = (green << 16) | (red << 8) | blue
+                        if red > limit0 or green > limit0 or blue > limit0 : 
+                            break0 = 1 
+                            # set the break command and break the for loop with update
+                            # this also include the overflow, it will become 0 
+                            break
+
                     
-                    # 將顏色數據放入 array 中
-                    self.ar[led_index] = color
-                    # print(self.ar)
-                
-                # 將 array 放入 StateMachine 的 FIFO 中，從而將顏色數據發送到 WS2812 LED
-                self.sm.put(self.ar, 8)
-                
-                # 等待一段時間，以便觀察 LED 的顏色
-                # time.sleep_ms(50)
+                        # 將紅、綠、藍值組合成一個顏色數據，按照 WS2812 的順序排列
+                        color = (green << 16) | (red << 8) | blue
+                        
+                        # 將顏色數據放入 array 中
+                        self.ar[led_index] = color
+                        # print(self.ar)
+                    
+                    # 將 array 放入 StateMachine 的 FIFO 中，從而將顏色數據發送到 WS2812 LED
+                    self.sm.put(self.ar, 8)
+                    
+                    # 等待一段時間，以便觀察 LED 的顏色
+                    # time.sleep_ms(50)
 
+                    pass 
+
+                except Exception as e:
+
+                    self.print_debug(f'now is error for LED: "{e}" and break',always_print0=1)
+
+                    # break the while loop and back to main 
+                    break
+
+                if break0 == 1 : 
+                    #  enter too large value than limit, break the loop 
+                    self.print_debug(f'the input "{red}, {green}, {blue}" is too large, break the loop', always_print0=1)
+                    pass 
+
+                # end of while loop 
                 pass 
 
-            except Exception as e:
-
-                self.print_debug(f'now is error for LED: "{e}" and break',always_print0=1)
-
-                # break the while loop and back to main 
-                break
-
-            if break0 == 1 : 
-                #  enter too large value than limit, break the loop 
-                self.print_debug(f'the input "{red}, {green}, {blue}" is too large, break the loop', always_print0=1)
-                pass 
-
-            # end of while loop 
+            # end of sim_mode check 
             pass 
 
         # end of function
@@ -154,53 +196,57 @@ class ws2812_LED ():
 
         x_count = 0
 
-        # 主循環，設置 LED 的顏色
-        while x_count < c_count0:
-            # 從 (0, 0, 0) 到 (255, 0, 0)
-            for red in range(max0+1):
-                color = (0 << 16) | (red << 8) | 0  # 紅色從 0 遞增到 255，綠色和藍色保持為 0
-                self.ar[0] = color
-                self.sm.put(self.ar, 8)
-                time.sleep_ms(10)  # 等待一小段時間，使顏色變化不要太快
+        if self.sim_mode != 0 : 
 
-            # 從 (0, 0, 0) 到 (255, 0, 0)
-            for red in range(max0, -1, -1):
-                color = (0 << 16) | (red << 8) | 0  # 紅色從 255 to 0 ，綠色和藍色保持為 0
-                self.ar[0] = color
-                self.sm.put(self.ar, 8)
-                time.sleep_ms(10)  # 等待一小段時間，使顏色變化不要太快
-            
-            # 從 (0, 0, 0) 到 (255, 0, 0)
-            for green in range(max0+1):
-                color = (green << 16) | (0 << 8) | 0  # 綠色從 0 to 255，紅色保持為 0，藍色保持為 0
-                self.ar[0] = color
-                self.sm.put(self.ar, 8)
-                time.sleep_ms(10)  # 等待一小段時間，使顏色變化不要太快
+            # 主循環，設置 LED 的顏色
+            while x_count < c_count0:
+                # 從 (0, 0, 0) 到 (255, 0, 0)
+                for red in range(max0+1):
+                    color = (0 << 16) | (red << 8) | 0  # 紅色從 0 遞增到 255，綠色和藍色保持為 0
+                    self.ar[0] = color
+                    self.sm.put(self.ar, 8)
+                    time.sleep_ms(10)  # 等待一小段時間，使顏色變化不要太快
 
-            # 從 (255, 0, 0) 到 (0, 255, 0)
-            for green in range(max0, -1, -1):
-                color = (green << 16) | (0 << 8) | 0  # 綠色從 255 遞減到 0，紅色保持為 0，藍色保持為 0
-                self.ar[0] = color
-                self.sm.put(self.ar, 8)
-                time.sleep_ms(10)  # 等待一小段時間，使顏色變化不要太快
-            
-            # 從 (0, 255, 0) 到 (0, 0, 255)
-            for blue in range(max0+1):
-                color = (0 << 16) | (0 << 8) | blue  # 藍色從 0 遞增到 255，紅色和綠色保持為 0
-                self.ar[0] = color
-                self.sm.put(self.ar, 8)
-                time.sleep_ms(10)  # 等待一小段時間，使顏色變化不要太快
+                # 從 (0, 0, 0) 到 (255, 0, 0)
+                for red in range(max0, -1, -1):
+                    color = (0 << 16) | (red << 8) | 0  # 紅色從 255 to 0 ，綠色和藍色保持為 0
+                    self.ar[0] = color
+                    self.sm.put(self.ar, 8)
+                    time.sleep_ms(10)  # 等待一小段時間，使顏色變化不要太快
+                
+                # 從 (0, 0, 0) 到 (255, 0, 0)
+                for green in range(max0+1):
+                    color = (green << 16) | (0 << 8) | 0  # 綠色從 0 to 255，紅色保持為 0，藍色保持為 0
+                    self.ar[0] = color
+                    self.sm.put(self.ar, 8)
+                    time.sleep_ms(10)  # 等待一小段時間，使顏色變化不要太快
 
-            # 從 (255, 0, 0) 到 (0, 255, 0)
-            for blue in range(max0, -1, -1):
-                color = (0 << 16) | (0 << 8) | blue  # 藍色從 255 to 0，紅色和綠色保持為 0
-                self.ar[0] = color
-                self.sm.put(self.ar, 8)
-                time.sleep_ms(10)  # 等待一小段時間，使顏色變化不要太快
+                # 從 (255, 0, 0) 到 (0, 255, 0)
+                for green in range(max0, -1, -1):
+                    color = (green << 16) | (0 << 8) | 0  # 綠色從 255 遞減到 0，紅色保持為 0，藍色保持為 0
+                    self.ar[0] = color
+                    self.sm.put(self.ar, 8)
+                    time.sleep_ms(10)  # 等待一小段時間，使顏色變化不要太快
+                
+                # 從 (0, 255, 0) 到 (0, 0, 255)
+                for blue in range(max0+1):
+                    color = (0 << 16) | (0 << 8) | blue  # 藍色從 0 遞增到 255，紅色和綠色保持為 0
+                    self.ar[0] = color
+                    self.sm.put(self.ar, 8)
+                    time.sleep_ms(10)  # 等待一小段時間，使顏色變化不要太快
+
+                # 從 (255, 0, 0) 到 (0, 255, 0)
+                for blue in range(max0, -1, -1):
+                    color = (0 << 16) | (0 << 8) | blue  # 藍色從 255 to 0，紅色和綠色保持為 0
+                    self.ar[0] = color
+                    self.sm.put(self.ar, 8)
+                    time.sleep_ms(10)  # 等待一小段時間，使顏色變化不要太快
 
 
-            # end of while 
-            x_count = x_count + 1 
+                # end of while 
+                x_count = x_count + 1 
+                pass
+
             pass
 
 
@@ -209,6 +255,7 @@ class ws2812_LED ():
     def print_debug(self, content='', always_print0=0):
         '''
         replace the original print function to another debug bus
+        230310: for self.sim_mode == 0 => no action
 
         '''
         if self.sim_mode == 1 and always_print0 == 1 :
@@ -227,7 +274,7 @@ class ws2812_LED ():
             if always_print0 == 1 :
                 print(content)
         elif self.sim_mode == 0:
-            print(content)
+            # print(content)
             pass
 
         pass
@@ -269,6 +316,7 @@ if __name__ == '__main__':
     elif testing_index == 2 : 
 
         led_w.set_LED()
+        led_w.board_check()
 
         
 

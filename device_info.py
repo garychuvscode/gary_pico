@@ -14,7 +14,7 @@ hardware configuration refer to the one note file
 
 # fmt: off
 # the device will identify base on the index of above:
-device_index = 1
+device_index = 3
 
 # firmware version will need to think about how to implement
 # may be in other file call update log
