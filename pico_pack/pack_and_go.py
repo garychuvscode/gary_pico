@@ -1,6 +1,7 @@
 '''
 this file used to transfer the file to .mpy file and put all
 the file into pico with config directory
+this should be run in python terminal, not pico terminal 
 '''
 
 # fmt: off
@@ -17,10 +18,12 @@ def execute_commands(commands):
             print(f"命令 '{command}' 執行失敗:")
             print(process.stderr)
 
+
+
 if __name__ == "__main__":
     # 將你想執行的命令作為列表元素
     commands = [
-        "mpy-cross example.py",  # 將 example.py 轉換為 .mpy
+        "mpy-cross main_out.py",  # 將 example.py 轉換為 .mpy
         "ampy --port /dev/ttyACM0 put example.mpy",  # 將 example.mpy 上傳到 Pico
         # 更多命令...
     ]
