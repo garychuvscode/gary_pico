@@ -5,6 +5,7 @@ import subprocess
 import win32api
 from win32con import MB_SYSTEMMODAL
 import pyvisa
+import re
 
 
 # pyvisa only support 9600 baud rate, use serial for higher baudrate
@@ -19,11 +20,12 @@ class PicoBridge:
         # default com_address:
         self.com_addr = "COM4"
         self.sim_mcu = 1
+        self.com_index = 1
 
         # using the COM open to fine the correct device
         pass
 
-    def com_open(self):
+    def com_open(self, open=0):
         """
         231112: no need to change the baud rate, default should be enough
         PICO use just like genetal communication method like input() of python
@@ -82,6 +84,7 @@ class PicoBridge:
 
                                 # also assign the correct COM address for reference
                                 self.com_addr = str(device)
+                                self.com_index = f'COM{self.extract_numeric_part(self.com_addr)}'
                                 break
 
                         except Exception as e:
@@ -108,6 +111,13 @@ class PicoBridge:
 
         else:
             print("open COM port but bypass the real operation")
+
+        if open == 0 : 
+            # pico bridge mode, need to close COM port
+            # because ampy need to access COM, don't be occupied 
+            # by resource manager 
+            self.com_close()
+            print(f'the com index is: {self.com_index}')
 
         pass
 
@@ -205,6 +215,22 @@ class PicoBridge:
         print("P.S Grace is cute! ~ ")
 
         return msg_res
+    
+    def extract_numeric_part(self, address):
+        """
+        Extracts the numeric part from a given address.
+
+        Parameters:
+        address (str): The address string containing numeric and non-numeric parts.
+
+        Returns:
+        str: The numeric part extracted from the address.
+        """
+        try:
+            numeric_part = re.search(r'\d+', address).group()
+            return numeric_part
+        except Exception as e:
+            print(f'Error: {e}')
 
     def execute_commands(self, commands):
         """執行一系列系統命令"""
@@ -302,11 +328,13 @@ if __name__ == "__main__":
     # Instantiate PicoBridge
     pico_bridge = PicoBridge()
     pico_bridge.com_open()
+    print(pico_bridge.com_addr)
+    pico_bridge.com_close()
 
     # 將你想執行的命令作為列表元素
     commands = [
         "mpy-cross pico_pack/main_out.py",  # 將 example.py 轉換為 .mpy
-        "ampy --port /dev/ttyACM0 put example.mpy",  # 將 example.mpy 上傳到 Pico
+        f"ampy --port COM14 put /main_out.mpy",  # 將 example.mpy 上傳到 Pico
         # 更多命令...
     ]
 
