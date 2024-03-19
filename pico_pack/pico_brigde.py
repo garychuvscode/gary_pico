@@ -22,6 +22,11 @@ class PicoBridge:
         self.sim_mcu = 1
         self.com_index = 1
 
+        self.mpy_gen = [
+            "mpy-cross pico_pack/main_out.py"
+            
+        ]
+
         # using the COM open to fine the correct device
         pass
 
@@ -333,7 +338,7 @@ if __name__ == "__main__":
 
     # 將你想執行的命令作為列表元素
     commands = [
-        "mpy-cross pico_pack/main_out.py",  # 將 example.py 轉換為 .mpy
+        "mpy-cross pico_pack/main_out.py"  # 將 example.py 轉換為 .mpy
         f"ampy --port COM14 put /main_out.mpy",  # 將 example.mpy 上傳到 Pico
         # 更多命令...
     ]
