@@ -32,6 +32,8 @@ class LCD_3inch5(framebuf.FrameBuffer):
             self.width = 480
             self.height = 160
 
+        time.sleep_ms(1000)
+
         self.cs = Pin(LCD_CS,Pin.OUT)
         self.rst = Pin(LCD_RST,Pin.OUT)
         self.dc = Pin(LCD_DC,Pin.OUT)
@@ -52,6 +54,7 @@ class LCD_3inch5(framebuf.FrameBuffer):
         self.buffer = bytearray(self.height * self.width * 2)
         super().__init__(self.buffer, self.width, self.height, framebuf.RGB565)
         self.init_display()
+        time.sleep_ms(1000)
 
 
     def write_cmd(self, cmd):
@@ -249,7 +252,7 @@ class LCD_3inch5(framebuf.FrameBuffer):
 if __name__=='__main__':
 
     LCD = LCD_3inch5()
-    LCD.bl_ctrl(80)
+    LCD.bl_ctrl(100)
     # LCD.bl(0)
     LCD.fill(LCD.BLACK)
     LCD.show_up()
@@ -331,8 +334,21 @@ if __name__=='__main__':
         LCD.show_up()
 
         while True:
+            print(f'start display2')
+            #color BRG
+            LCD.fill(LCD.WHITE)
+            LCD.fill_rect(140,5,200,30,LCD.RED)
+            LCD.text("Raspberry Pi Pico",170,17,LCD.WHITE)
+            display_color = 0x001F
+            LCD.text("3.5' IPS LCD TEST",170,57,LCD.BLACK)
+            for i in range(0,12):
+                LCD.fill_rect(i*30+60,100,30,50,(display_color))
+                display_color = display_color << 1
+            LCD.show_up()
             print(f'get touch 2')
             LCD.LED(1)
+            time.sleep_ms(500)
+            LCD.LED(0)
             get = LCD.touch_get()
             if get != None:
                 X_Point = int((get[1]-430)*480/3270)
