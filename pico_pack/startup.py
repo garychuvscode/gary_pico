@@ -1,13 +1,14 @@
+# fmt: off
 """
-this file used to generate startup process for pure 
-pico just installed the UF2, 
+this file used to generate startup process for pure
+pico just installed the UF2,
 
-file can be downloaded without licensing process 
+file can be downloaded without licensing process
 but limited to the open source folder content
 
-need to have device selection window and 
-choose different device info to build up 
-the firmware update process with licensing 
+need to have device selection window and
+choose different device info to build up
+the firmware update process with licensing
 """
 
 # import for excel control
@@ -15,6 +16,7 @@ from datetime import datetime
 
 # this import is for the VBA function
 import win32com.client
+
 # # also for the jump out window, same group with win32con
 import win32api
 import time
@@ -56,8 +58,23 @@ class startup_pico ():
         self.startup_link = "https://drive.google.com/file/d/1r21Myem2Ag6_dP-ToRL3jnLJ7tLcHcDQ/view?usp=drive_link"
         self.startup_name = "file_list_free.csv"
 
-        pass 
+        # turn off all the print delay and turn on all the index print
+        # 0 => gary test mode, 1 => on line mode
+        self.grace_mode = 0
 
+        pass
+
+    def grace_print(self, content=""):
+        '''
+        print the information for engineer mode
+        only print when grace_mode=0, gary test mode
+        '''
+        if self.grace_mode == 1 :
+            pass
+        else:
+            print(content)
+
+        pass
 
     def message_box(self, content_str, title_str, box_type=0):
         '''
@@ -72,14 +89,14 @@ class startup_pico ():
         content_str = str(content_str)
         title_str = str(title_str)
         msg_res = 7
-        
+
         msg_res = win32api.MessageBox(0, content_str, title_str, box_type)
         # 0 to 3 is different type of message box and can sen different return value
         # detail check on the internet
         print('P.S Grace is cute! ~ ')
 
         return msg_res
-    
+
     def pwd(self, text, delay=0.04, delay_2=0.5):
         """
         Print each character of the text with a specified delay between characters.
@@ -88,6 +105,10 @@ class startup_pico ():
         text (str): The text to be printed.
         delay (float): The delay (in seconds) between each character.
         """
+        if self.grace_mode == 0 :
+            delay = 0
+            delay_2 = 0
+
         for char in text:
             print(char, end='', flush=True)  # end='' 表示不換行，flush=True 表示立即輸出至終端
             time.sleep(delay)  # 控制延遲
@@ -95,7 +116,7 @@ class startup_pico ():
         # auto to next line
         print("")
         time.sleep(delay_2)
-   
+
     def download_file_from_drive(self, file_link, destination_folder=None):
         """
         Downloads a file from Google Drive with the given file ID.
@@ -128,10 +149,10 @@ class startup_pico ():
             # Save the downloaded file to the destination path
             with open(destination_path, "wb") as f:
                 f.write(response.content)
-            print(f"File downloaded successfully to {destination_path}")
+            self.grace_print(f"File downloaded successfully to {destination_path}")
         else:
             print("Failed to download file")
-    
+
     def get_file_name_from_link(self, drive_link):
         """
         Retrieves the name of a file from a Google Drive share link.
@@ -162,7 +183,7 @@ class startup_pico ():
             return file_name
         else:
             return None
-        
+
     def delete_folder(self, folder_path=None):
         """
         Deletes a folder and all its contents.
@@ -173,12 +194,12 @@ class startup_pico ():
         Returns:
             None
         """
-        if folder_path == None: 
+        if folder_path == None:
             folder_path = self.default_temp_path
 
         shutil.rmtree(folder_path)
-        print(f"Folder deleted: {folder_path}")
-    
+        self.grace_print(f"Folder deleted: {folder_path}")
+
 
     def get_elements_from_link(self, link=None, search_term="Ver_", case_sensitive=True, exactly_same=False):
         """
@@ -193,15 +214,15 @@ class startup_pico ():
         Returns:
             list: A list containing all elements found in the webpage containing the search term.
         """
-        if link == None: 
+        if link == None:
             link = self.startup_link
 
         # important: from view link to donwload link
-        
+
 
         # Send a GET request to the link
         response = requests.get(link)
-        print(response.content)
+        self.grace_print(response.content)
 
         # Parse the HTML content of the response
         soup = BeautifulSoup(response.content, "html.parser")
@@ -229,7 +250,7 @@ class startup_pico ():
             if file_path == None:
                 file_path = f"{self.default_temp_path}/{self.startup_name}"
             elements_with_prefix = []  # 用於存儲找到的符合條件的元素
-            
+
             with open(file_path, mode='r', newline='', encoding='utf-8') as csvfile:
                 csv_reader = csv.reader(csvfile)
                 for row in csv_reader:  # 遍歷CSV的每一行
@@ -245,31 +266,33 @@ class startup_pico ():
     def version_select(self, version="Ver_1.0"):
         """
         根據提供的版本號從 CSV 檔案中選擇相應的檔案連結並建立字典。
-        
+
         參數:
         version (str): 要選擇的檔案版本，如 "Ver_1.0"。
-        
+
         返回:
         dict: 字典，其索引為 file_name，值為該版本對應的檔案連結。
         """
-        
+
         # 讀取 CSV 檔案
-        df = pd.read_csv('pico_pack/file_list_free.csv')
-        
+        df = pd.read_csv('C:/g_temp_pico/file_list_free.csv')
+
         try:
             # 檢查提供的版本是否存在於 DataFrame 中
             if version not in df.columns:
                 raise ValueError(f"Version {version} not found in CSV file.")
-            
+
             # 建立字典：file_name 為鍵，指定版本的檔案連結為值
             version_dict = df.set_index('file_name')[version].dropna().to_dict()
-            
+
             return version_dict
         except Exception as e:
             print(f'Error: {e}')
+            version_dict = {}
+            return version_dict
 
 
-    def startup_loop(self): 
+    def startup_loop(self):
         '''
         process of startup
         '''
@@ -279,89 +302,94 @@ class startup_pico ():
         # self.pwd(f"For questions and issue, please contact: gary061508@gmail.com")
         # self.pwd(f"Thanks and enjoy, by Gary Chu")
         # self.pwd(f"\nPlease make sure board is plugged in and COM number is known")
-        
-        # while 1 : 
+
+        # while 1 :
         #     # device selection
         #     self.pwd(f"What kind of board your what to use now? input: 'pico' for original or 'yd' for YD-2040")
         #     tpye_sel = input()
-        #     if tpye_sel == "pico": 
-        #         # this is original pico 
+        #     if tpye_sel == "pico":
+        #         # this is original pico
         #         device_file = 'device_info_pico.py'
 
-        #         pass 
-        #     elif tpye_sel == "yd": 
-        #         # this is YD2040 
+        #         pass
+        #     elif tpye_sel == "yd":
+        #         # this is YD2040
         #         device_file = 'device_info_yd.py'
 
-        #         pass 
-        #     else: 
+        #         pass
+        #     else:
         #         self.pwd(f"GG, input incorrect, please try again~ @@")
 
-        #     if tpye_sel == "pico" or tpye_sel == "yd" : 
+        #     if tpye_sel == "pico" or tpye_sel == "yd" :
         #         self.pwd(f"is '{tpye_sel}' correct? 'y' for next step and 'n' for re-input ")
         #         temp_ans = input()
-        #         if temp_ans == 'y': 
+        #         if temp_ans == 'y':
         #             break
 
 
         #     # end of while
-        #     pass 
+        #     pass
         # self.pwd(f"'{tpye_sel}' is choose by user")
-        
 
-        # while 1 : 
-        #     # COM number selection 
-        
+
+        # while 1 :
+        #     # COM number selection
+
         #     self.pwd(f"Please enter to correct COM number for plugged board")
         #     com_num = input()
 
-        #     try: 
+        #     try:
         #         com_test = rm.open_resource(f"COM{com_num}")
-                
-        #         # close if success 
+
+        #         # close if success
         #         self.pwd(f"COM{com_num}, connteced ok, now update firmware")
         #         # close and release COM port
         #         com_test.close()
 
         #         # break the loop after COM port number input correct
         #         break
-                
-        #     except Exception as e: 
-                
+
+        #     except Exception as e:
+
         #         self.pwd(f"GG, input incorrect, please try again, error message:")
         #         print(e)
 
-        #     # end while 
-        #     pass 
+        #     # end while
+        #     pass
 
-        # check available version and list for user to select: 
-        
+        # check available version and list for user to select:
 
-        # 240319: the csv in google can't be read, error 
+
+        # 240319: the csv in google can't be read, error
         # ver_info = self.get_elements_from_link()
         self.download_file_from_drive(self.startup_link)
         ver_info = self.find_elements_with_prefix()
-        
-        # prevent the file been seen during user input 
+
+        # prevent the file been seen during user input
         self.delete_folder(self.default_temp_path)
 
         self.pwd(f"The version we have on the server, select the version needed:")
         print(ver_info)
         print("Input must be the same!")
-        # download file from google 
-        ver_sel = input()
-        
-        # there may hacve version check function already 
-        # for ver_inf in ver_info : 
-        #     if ver_inf == ver_sel : 
+        # download file from google
+        ver_sel = input("Please choose version: ")
+
+        # there may hacve version check function already
+        # for ver_inf in ver_info :
+        #     if ver_inf == ver_sel :
         #         # find the correct version, knowing the link
+
+
+        # download again after choosing version is finished
+        self.download_file_from_drive(self.startup_link)
+        # choose related link for down load file
         file_list = self.version_select(version=ver_sel)
 
+        for file_name, link in file_list.items():  # 遍歷字典中的每個鍵值對
+            if file_name != 'comments':  # 排除非文件鏈接的條目
+                self.download_file_from_drive(link)  # 使用文件下載函數下載文件
 
-        
-        self.download_file_from_drive(self.startup_link)
-        # choose related link for down load file 
-
+        # download finished here
 
 
         self.pwd(f"")
@@ -375,7 +403,7 @@ class startup_pico ():
 
         # delete all the file download when process done
         self.delete_folder()
-        pass 
+        pass
 
 
 
@@ -387,4 +415,4 @@ world_of_pico.startup_loop()
 if __name__ == "__main__":
 
 
-    pass 
+    pass
