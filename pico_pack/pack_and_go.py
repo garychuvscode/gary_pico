@@ -12,10 +12,10 @@ def execute_commands(commands):
     for command in commands:
         process = subprocess.run(command, shell=True, capture_output=True, text=True)
         if process.returncode == 0:
-            print(f"命令 '{command}' 執行成功:")
+            print(f"command '{command}' done:")
             print(process.stdout)
         else:
-            print(f"命令 '{command}' 執行失敗:")
+            print(f"command '{command}' fail:")
             print(process.stderr)
 
 

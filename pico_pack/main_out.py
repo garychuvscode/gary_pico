@@ -820,7 +820,7 @@ self.io_temp.value(self.io_state_lock)
                 self.led_toggle(duration=0.3)
                 self.w_led.set_LED(red=0,green=0,blue=1)
                 self.led_toggle(duration=0.3)
-                self.w_led.set_LED(red=0,green=1,blue=0)
+                self.w_led.set_LED(red=1,green=0,blue=1)
                 pwr_signal = 1
 
             self.wait_cmd()
