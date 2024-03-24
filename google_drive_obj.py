@@ -4,13 +4,15 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.http import MediaFileUpload  # Add this import statement
 
+# fmt: off
 
 class GoogleDrive_Ctrl_obj:
     """
     this is for google drive related operation
-    class only for internal used only, since there are credential needed 
-    for specific account 
+    class only for internal used only, since there are credential needed
+    for specific account
     """
 
     def __init__(
@@ -20,16 +22,16 @@ class GoogleDrive_Ctrl_obj:
         refresh_token=None,
         access_token=None,
         token_uri="https://oauth2.googleapis.com/token",
-        account = "nova781", 
-        cred_dict=None
+        account="nova781",
+        cred_dict=None,
     ):
-        if cred_dict == None: 
+        if cred_dict == None:
             # load from direct iput
             self.client_id = client_id
             self.client_secret = client_secret
             self.refresh_token = refresh_token
-            
-        else : 
+
+        else:
             # or load from loder output dictionary
             self.client_id = cred_dict["client_id"]
             self.client_secret = cred_dict["client_secret"]
@@ -43,27 +45,25 @@ class GoogleDrive_Ctrl_obj:
         # this is the service object for other operation
         self.credentials = self.create_credentials()
         self.service = self.open_service()
-        
 
-    def open_service(self): 
+    def open_service(self):
         """
         open the service channel for google drive
         """
         service = "sevice not assigned yet"
 
-        try: 
+        try:
             # update everytime open the object
             self.credentials.refresh(Request())
 
             # 建立 Google Drive API 的服務物件
             service = build("drive", "v3", credentials=self.credentials)
 
-        except Exception as e : 
-            print(f'open service fail, check on google cloud for status')
-            print(f'if the refresh_token need to be reset (usually 1 year)')
+        except Exception as e:
+            print(f"open service fail, check on google cloud for status")
+            print(f"if the refresh_token need to be reset (usually 1 year)")
 
         return service
-
 
     def create_credentials(self):
         """
@@ -77,14 +77,13 @@ class GoogleDrive_Ctrl_obj:
             token_uri=self.token_uri,
         )
 
-
     # def list_files_in_folder(self, folder_name0):
     #     """
     #     列出指定 Google Drive 資料夾中的所有檔案。
     #     folder_name: 資料夾名稱
     #     """
     #     try:
-            
+
     #         # 查詢資料夾 ID
     #         folder_id = None
     #         page_token = None
@@ -131,7 +130,7 @@ class GoogleDrive_Ctrl_obj:
     #             page_token = response.get("nextPageToken")
     #             if page_token is None:
     #                 break
-            
+
     #         # print before return dictionary
     #         print(f"Files in folder '{folder_name0}' :")
     #         for name, file_id in file_list.items():
@@ -142,7 +141,6 @@ class GoogleDrive_Ctrl_obj:
     #     except Exception as e:
     #         print(f"Error: {e}")
     #         return {}
-
 
     def check_and_refresh_credentials(self):
         """
@@ -155,31 +153,29 @@ class GoogleDrive_Ctrl_obj:
         else:
             print("Credentials are still valid.")
 
-
     # ==============================
 
     def get_folder_id_by_name(self, folder_name):
         """
         根據資料夾名稱獲取資料夾的 ID。
-
         Args:
             folder_name (str): 資料夾的名稱。
-
         Returns:
             str: 資料夾的 ID，如果未找到則返回 None。
         """
-        query = f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'"
+        query = (
+            f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'"
+        )
         response = self.service.files().list(q=query, fields="files(id)").execute()
-        folders = response.get('files', [])
+        folders = response.get("files", [])
 
         if folders:
-            return folders[0].get('id')
+            return folders[0].get("id")
         return None
 
     def get_file_id_by_name(self, file_name, parent_folder_id=None):
         """
         根據檔案名稱獲取檔案的 ID。
-
         Args:
             file_name (str): 檔案的名稱。
             parent_folder_id (str): 父資料夾的 ID，如果指定，則只在該資料夾內搜索。
@@ -191,10 +187,10 @@ class GoogleDrive_Ctrl_obj:
         if parent_folder_id:
             query += f" and '{parent_folder_id}' in parents"
         response = self.service.files().list(q=query, fields="files(id)").execute()
-        files = response.get('files', [])
+        files = response.get("files", [])
 
         if files:
-            return files[0].get('id')
+            return files[0].get("id")
         return None
 
     def create_folder(self, name, parent_folder_name=None):
@@ -219,23 +215,25 @@ class GoogleDrive_Ctrl_obj:
         if parent_folder_name:
             parent_id = self.get_folder_id_by_name(parent_folder_name)
             if parent_id is None:
-                print(f"Parent folder '{parent_folder_name}' not found. Creating '{name}' in the root.")
+                print(
+                    f"Parent folder '{parent_folder_name}' not found. Creating '{name}' in the root."
+                )
 
         # 創建新資料夾
         file_metadata = {
-            'name': name,
-            'mimeType': 'application/vnd.google-apps.folder',
-            'parents': [parent_id] if parent_id else []
+            "name": name,
+            "mimeType": "application/vnd.google-apps.folder",
+            "parents": [parent_id] if parent_id else [],
         }
-        folder = self.service.files().create(body=file_metadata, fields='id').execute()
+        folder = self.service.files().create(body=file_metadata, fields="id").execute()
         print(f"Folder '{name}' created with ID: {folder.get('id')}")
-        return folder.get('id')
+        return folder.get("id")
 
     def list_files_in_folder(self, folder_name, depth_scan=3):
         """
         列出指定 Google Drive 資料夾中的所有檔案。
-        folder_name (str): 資料夾名稱
-        depth_scan (int): The maximum depth to scan. 0 means scan all layers, positive integer means the number of layers to scan. Default is 3.
+        folder_name (str): 資料夾名稱。
+        depth_scan (int): 掃描的最大深度。0 表示掃描所有層，正整數表示要掃描的層數。默認為 3。
         """
         try:
             # 查詢資料夾 ID
@@ -267,7 +265,7 @@ class GoogleDrive_Ctrl_obj:
 
             # 列出資料夾中的檔案
             file_list = {}
-            
+
             def list_files_recursive(folder_id, current_depth=1, indent_level=0):
                 nonlocal file_list
                 if depth_scan > 0 and current_depth > depth_scan:
@@ -285,31 +283,24 @@ class GoogleDrive_Ctrl_obj:
                         .execute()
                     )
                     for file in response.get("files", []):
+                        indent = "\t" * indent_level
                         if file.get("mimeType") == "application/vnd.google-apps.folder":
-                            file_list["\t" * indent_level + f"folder: {file.get('name')}"] = file.get("id")
+                            print(f"{indent}folder: {file.get('name')}")
                             list_files_recursive(file.get("id"), current_depth + 1, indent_level + 1)
                         else:
-                            file_list["\t" * indent_level + f"file: {file.get('name')} ({file.get('id')})"] = file.get("id")
+                            print(f"{indent}file: {file.get('name')}")
+                            file_list[file.get('name')] = file.get("id")
                     page_token = response.get("nextPageToken")
                     if page_token is None:
                         break
-            
-            list_files_recursive(folder_id)
 
-            # print before return dictionary
-            print(f"Files in folder '{folder_name}' :")
-            for name, file_id in file_list.items():
-                print(f"{name}")
+            list_files_recursive(folder_id)
 
             return file_list
 
         except Exception as e:
             print(f"Error: {e}")
             return {}
-
-
-
-
 
     def rename_file(self, old_name, new_name, parent_folder_name=None):
         """
@@ -333,12 +324,13 @@ class GoogleDrive_Ctrl_obj:
             return False
 
         try:
-            self.service.files().update(fileId=file_id, body={'name': new_name}).execute()
+            self.service.files().update(
+                fileId=file_id, body={"name": new_name}
+            ).execute()
             return True
         except Exception as e:
             print(f"Error renaming file: {e}")
             return False
-
 
     def upload_file(self, file_path, parent_folder_name=None):
         """
@@ -356,17 +348,20 @@ class GoogleDrive_Ctrl_obj:
             parent_id = self.get_folder_id_by_name(parent_folder_name)
             if parent_id is None:
                 print(f"Folder '{parent_folder_name}' not found. Uploading to root.")
-        
+
         file_metadata = {
-            'name': os.path.basename(file_path),
-            'parents': [parent_id] if parent_id else []
+            "name": os.path.basename(file_path),
+            "parents": [parent_id] if parent_id else [],
         }
         media = MediaFileUpload(file_path, resumable=True)
-        file = self.service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-        return file.get('id')
+        file = (
+            self.service.files()
+            .create(body=file_metadata, media_body=media, fields="id")
+            .execute()
+        )
+        return file.get("id")
 
-
-    def share_file(self, shared_item_name, role='reader', type='anyone'):
+    def share_file(self, shared_item_name, role="reader", type="anyone"):
         """
         設定 Google Drive 文件或資料夾的分享權限。
 
@@ -386,13 +381,14 @@ class GoogleDrive_Ctrl_obj:
                 return None
 
         self.service.permissions().create(
-            fileId=item_id,
-            body={'role': role, 'type': type},
-            fields='id'
+            fileId=item_id, body={"role": role, "type": type}, fields="id"
         ).execute()
 
-        response = self.service.files().get(fileId=item_id, fields='webViewLink').execute()
-        return response.get('webViewLink')
+        response = (
+            self.service.files().get(fileId=item_id, fields="webViewLink").execute()
+        )
+        return response.get("webViewLink")
+
 
 # 測試代碼
 if __name__ == "__main__":
@@ -409,19 +405,20 @@ if __name__ == "__main__":
     # )
     # client_secret = "client_secret_here"
     # refresh_token = "refresh_token_here"
-    
+
     # google_ctrl = GoogleDrive_Ctrl_obj(
     #     client_id, client_secret, refresh_token
     # )
-    google_ctrl = GoogleDrive_Ctrl_obj(
-        cred_dict=cred_dict0
-    )
+    google_ctrl = GoogleDrive_Ctrl_obj(cred_dict=cred_dict0)
 
     # 執行檔案列出功能
     folder_name = "V1.1"
+    # folder_name = "pico_release"
 
     files_in_folder = google_ctrl.list_files_in_folder(folder_name)
-    
+
+    # testing for upload file
+    google_ctrl.upload_file(file_path="C:/py_google/testing_note.txt")
 
     # 測試創建資料夾
     print("Testing folder creation...")
@@ -451,7 +448,6 @@ if __name__ == "__main__":
     print(f"Setting share permissions for file '{file_name_to_share}'...")
     share_link = google_ctrl.share_file(file_name_to_share)
     print(f"Share link for file '{file_name_to_share}': {share_link}")
-
 
     # 測試重命名檔案（請根據你的實際情況替換 'old_file_name' 和 'new_file_name'）
     old_file_name = "TestFolder2"

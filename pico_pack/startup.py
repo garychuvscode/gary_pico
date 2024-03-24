@@ -57,12 +57,24 @@ class startup_pico ():
         self.default_temp_path = "C:/g_temp_pico"
         self.startup_link = "https://drive.google.com/file/d/1r21Myem2Ag6_dP-ToRL3jnLJ7tLcHcDQ/view?usp=drive_link"
         self.startup_name = "file_list_free.csv"
+        self.startup_id = "1r21Myem2Ag6_dP-ToRL3jnLJ7tLcHcDQ"
 
+        self.file_link_model = f"https://drive.google.com/file/d/{self.startup_id}/view"
         # turn off all the print delay and turn on all the index print
         # 0 => gary test mode, 1 => on line mode
         self.grace_mode = 0
 
+        # choose the file list to be id or link
+        self.id_link = 'id'
+
         pass
+
+    def id_to_link(self, file_id0=None):
+        '''
+        transfer id to link
+        '''
+        return f"https://drive.google.com/file/d/{file_id0}/view"
+
 
     def grace_print(self, content=""):
         '''
@@ -117,14 +129,17 @@ class startup_pico ():
         print("")
         time.sleep(delay_2)
 
+    def download_file_from_drive_id(self, file_id1, destination_folder0=None):
+        temp_link = self.id_to_link(file_id0=file_id1)
+        self.download_file_from_drive(file_link=temp_link, destination_folder=destination_folder0)
+        pass
+
     def download_file_from_drive(self, file_link, destination_folder=None):
         """
         Downloads a file from Google Drive with the given file ID.
-
         Args:
             file_id (str): The ID of the Google Drive file.
             destination_path (str): The destination path on the local machine to save the file.
-
         Returns:
             None
         """
@@ -153,25 +168,25 @@ class startup_pico ():
         else:
             print("Failed to download file")
 
+    def get_file_name_from_id(self, file_id0):
+        temp_link = self.id_to_link(file_id0)
+        file_name_res = self.get_file_name_from_link(temp_link)
+        return file_name_res
+
     def get_file_name_from_link(self, drive_link):
         """
         Retrieves the name of a file from a Google Drive share link.
-
         Args:
             drive_link (str): The Google Drive share link.
-
         Returns:
             str: The name of the file.
         """
         # Send a GET request to the share link
         response = requests.get(drive_link)
-
         # Parse the HTML content of the response
         soup = BeautifulSoup(response.content, "html.parser")
-
         # Find the element containing the file name
         title_element = soup.find("title")
-
         # Extract and return the file name
         if title_element:
             full_file_name = title_element.text.strip()
@@ -187,10 +202,8 @@ class startup_pico ():
     def delete_folder(self, folder_path=None):
         """
         Deletes a folder and all its contents.
-
         Args:
             folder_path (str): The path of the folder to delete.
-
         Returns:
             None
         """
@@ -204,7 +217,6 @@ class startup_pico ():
     def get_elements_from_link(self, link=None, search_term="Ver_", case_sensitive=True, exactly_same=False):
         """
         Retrieves all elements containing the specified search term from a given link.
-
         Args:
             link (str): The link to the webpage.
             search_term (str): The search term to look for in the elements.
@@ -218,7 +230,6 @@ class startup_pico ():
             link = self.startup_link
 
         # important: from view link to donwload link
-
 
         # Send a GET request to the link
         response = requests.get(link)
@@ -266,10 +277,8 @@ class startup_pico ():
     def version_select(self, version="Ver_1.0"):
         """
         根據提供的版本號從 CSV 檔案中選擇相應的檔案連結並建立字典。
-
         參數:
         version (str): 要選擇的檔案版本，如 "Ver_1.0"。
-
         返回:
         dict: 字典，其索引為 file_name，值為該版本對應的檔案連結。
         """
@@ -362,7 +371,8 @@ class startup_pico ():
 
         # 240319: the csv in google can't be read, error
         # ver_info = self.get_elements_from_link()
-        self.download_file_from_drive(self.startup_link)
+        # self.download_file_from_drive(self.startup_link)
+        self.download_file_from_drive_id(self.startup_id)
         ver_info = self.find_elements_with_prefix()
 
         # prevent the file been seen during user input
@@ -381,13 +391,14 @@ class startup_pico ():
 
 
         # download again after choosing version is finished
-        self.download_file_from_drive(self.startup_link)
+        # self.download_file_from_drive(self.startup_link)
+        self.download_file_from_drive_id(self.startup_id)
         # choose related link for down load file
         file_list = self.version_select(version=ver_sel)
 
-        for file_name, link in file_list.items():  # 遍歷字典中的每個鍵值對
+        for file_name, id_in_list in file_list.items():  # 遍歷字典中的每個鍵值對
             if file_name != 'comments':  # 排除非文件鏈接的條目
-                self.download_file_from_drive(link)  # 使用文件下載函數下載文件
+                self.download_file_from_drive_id(id_in_list)  # 使用文件下載函數下載文件
 
         # download finished here
 
