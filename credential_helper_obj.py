@@ -4,10 +4,11 @@ credentials = dict()
 
 class crediential_helper ():
 
-    def __init__(self, file_name0='nova781.txt'):
+    def __init__(self, file_name0='nova781'):
 
         # self.file_path0 = f"C:/py_google/{file_name0}"
-        self.file_path0 = f"G:/我的雲端硬碟/py_google/{file_name0}"
+        self.file_name = file_name0
+        self.file_path0 = f"G:/我的雲端硬碟/py_google/{file_name0}.txt"
 
     def load_credentials(self, file_path=None):
         """
@@ -35,11 +36,11 @@ class crediential_helper ():
                 if not all(key in credentials_dict for key in required_keys):
                     raise ValueError("Credentials file is missing required keys.")
                 
-                print("Credentials successfully load from file.")
+                print(f"Credentials of {self.file_name} successfully load from file.")
                 return credentials_dict
 
         except Exception as e:
-            print(f"Error loading credentials: {e}")
+            print(f"Error loading credentials '{self.file_name}': {e}")
             return {}
 
 
@@ -68,11 +69,11 @@ class crediential_helper ():
                 # 將字典轉化為字符串並寫入文件
                 file.write(str(credentials_dict))
 
-            print("Credentials successfully saved to file.")
+            print(f"Credentials successfully saved to file: {self.file_name}.")
             return True
 
         except Exception as e:
-            print(f"Error saving credentials to file: {e}")
+            print(f"Error saving credentials to file: {self.file_name} with err: {e}")
             return False
 
 
