@@ -6,6 +6,9 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.http import MediaFileUpload  # Add this import statement
 
+import pandas as pd
+import xlwings as xw
+
 # fmt: off
 
 class GoogleDrive_Ctrl_obj:
@@ -46,6 +49,8 @@ class GoogleDrive_Ctrl_obj:
         self.credentials = self.create_credentials()
         self.service = self.open_service()
 
+        self.default_csv_path = f"C:/py_google/"
+
     def open_service(self):
         """
         open the service channel for google drive
@@ -76,6 +81,16 @@ class GoogleDrive_Ctrl_obj:
             client_secret=self.client_secret,
             token_uri=self.token_uri,
         )
+
+    def update_file_list(self, file_name, drive_folder_name):
+        """
+        update the file list to excel file, then pass to pandas to 
+        transfer to csv 
+        """
+        file_path = f"{self.default_csv_path}{file_name}.xlsx"
+        wb_list = xw.Book(file_path)
+        
+        
 
     # def list_files_in_folder(self, folder_name0):
     #     """
@@ -411,50 +426,66 @@ if __name__ == "__main__":
     # )
     google_ctrl = GoogleDrive_Ctrl_obj(cred_dict=cred_dict0)
 
-    # 執行檔案列出功能
-    folder_name = "V1.1"
-    # folder_name = "pico_release"
 
-    files_in_folder = google_ctrl.list_files_in_folder(folder_name)
+    test_index = 1 
 
-    # testing for upload file
-    google_ctrl.upload_file(file_path="C:/py_google/testing_note.txt")
+    if test_index == 0 : 
 
-    # 測試創建資料夾
-    print("Testing folder creation...")
-    folder_name = "TestFolder"
-    folder_id = google_ctrl.create_folder(folder_name)
-    print(f"Folder '{folder_name}' created with ID: {folder_id}")
+        # 執行檔案列出功能
+        folder_name = "V1.1"
+        # folder_name = "pico_release"
 
-    # 測試列出資料夾中的檔案
-    folder_name = "pico_release"
-    print(f"Listing files in folder '{folder_name}'...")
-    files = google_ctrl.list_files_in_folder(folder_name)
-    # for file in files:
-    #     print(file)
+        files_in_folder = google_ctrl.list_files_in_folder(folder_name)
 
-    # 測試重命名檔案（請根據你的實際情況替換 'old_file_name' 和 'new_file_name'）
-    old_file_name = "TestFolder"
-    new_file_name = "TestFolder2"
-    print(f"Renaming file '{old_file_name}' to '{new_file_name}'...")
-    success = google_ctrl.rename_file(old_file_name, new_file_name)
-    if success:
-        print(f"File '{old_file_name}' successfully renamed to '{new_file_name}'")
-    else:
-        print(f"Failed to rename file '{old_file_name}'")
+        # testing for upload file
+        google_ctrl.upload_file(file_path="C:/py_google/testing_note.txt")
 
-    # 測試設定檔案分享權限（請根據你的實際情況替換 'file_name_to_share'）
-    file_name_to_share = "a142"
-    print(f"Setting share permissions for file '{file_name_to_share}'...")
-    share_link = google_ctrl.share_file(file_name_to_share)
-    print(f"Share link for file '{file_name_to_share}': {share_link}")
+        # 測試創建資料夾
+        print("Testing folder creation...")
+        folder_name = "TestFolder"
+        folder_id = google_ctrl.create_folder(folder_name)
+        print(f"Folder '{folder_name}' created with ID: {folder_id}")
 
-    # 測試重命名檔案（請根據你的實際情況替換 'old_file_name' 和 'new_file_name'）
-    old_file_name = "TestFolder2"
-    new_file_name = "TestFolder"
-    print(f"Renaming file '{old_file_name}' to '{new_file_name}'...")
-    success = google_ctrl.rename_file(old_file_name, new_file_name)
-    if success:
-        print(f"File '{old_file_name}' successfully renamed to '{new_file_name}'")
-    else:
-        print(f"Failed to rename file '{old_file_name}'")
+        # 測試列出資料夾中的檔案
+        folder_name = "pico_release"
+        print(f"Listing files in folder '{folder_name}'...")
+        files = google_ctrl.list_files_in_folder(folder_name)
+        # for file in files:
+        #     print(file)
+
+        # 測試重命名檔案（請根據你的實際情況替換 'old_file_name' 和 'new_file_name'）
+        old_file_name = "TestFolder"
+        new_file_name = "TestFolder2"
+        print(f"Renaming file '{old_file_name}' to '{new_file_name}'...")
+        success = google_ctrl.rename_file(old_file_name, new_file_name)
+        if success:
+            print(f"File '{old_file_name}' successfully renamed to '{new_file_name}'")
+        else:
+            print(f"Failed to rename file '{old_file_name}'")
+
+        # 測試設定檔案分享權限（請根據你的實際情況替換 'file_name_to_share'）
+        file_name_to_share = "a142"
+        print(f"Setting share permissions for file '{file_name_to_share}'...")
+        share_link = google_ctrl.share_file(file_name_to_share)
+        print(f"Share link for file '{file_name_to_share}': {share_link}")
+
+        # 測試重命名檔案（請根據你的實際情況替換 'old_file_name' 和 'new_file_name'）
+        old_file_name = "TestFolder2"
+        new_file_name = "TestFolder"
+        print(f"Renaming file '{old_file_name}' to '{new_file_name}'...")
+        success = google_ctrl.rename_file(old_file_name, new_file_name)
+        if success:
+            print(f"File '{old_file_name}' successfully renamed to '{new_file_name}'")
+        else:
+            print(f"Failed to rename file '{old_file_name}'")
+
+
+        pass 
+
+    elif test_index == 1 : 
+
+        csv_name = "file_list_free"  # 請替換成你的CSV檔案路徑
+        drive_folder_name = "V1.2"  # 替換成你的Google Drive資料夾名稱
+        google_ctrl.update_file_list_csv(csv_name, drive_folder_name)
+
+        pass 
