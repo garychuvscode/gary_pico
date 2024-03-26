@@ -84,13 +84,13 @@ class GoogleDrive_Ctrl_obj:
 
     def update_file_list(self, file_name, drive_folder_name):
         """
-        update the file list to excel file, then pass to pandas to 
-        transfer to csv 
+        update the file list to excel file, then pass to pandas to
+        transfer to csv
         """
         file_path = f"{self.default_csv_path}{file_name}.xlsx"
         wb_list = xw.Book(file_path)
-        
-        
+
+
 
     # def list_files_in_folder(self, folder_name0):
     #     """
@@ -347,6 +347,26 @@ class GoogleDrive_Ctrl_obj:
             print(f"Error renaming file: {e}")
             return False
 
+    def delete_folder_by_name(self, folder_name):
+        """
+        根據資料夾名稱刪除 Google Drive 上的資料夾。
+
+        Args:
+            folder_name (str): 要刪除的資料夾的名稱。
+        """
+        try:
+            # 查找資料夾的 ID
+            folder_id = self.get_folder_id_by_name(folder_name)
+            if folder_id:
+                # 呼叫 Google Drive API 進行刪除
+                self.service.files().delete(fileId=folder_id).execute()
+                print(f"Folder '{folder_name}' has been deleted successfully.")
+            else:
+                print(f"Folder '{folder_name}' not found.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+
     def upload_file(self, file_path, parent_folder_name=None):
         """
         將文件上傳到指定的 Google Drive 資料夾。
@@ -427,9 +447,9 @@ if __name__ == "__main__":
     google_ctrl = GoogleDrive_Ctrl_obj(cred_dict=cred_dict0)
 
 
-    test_index = 1 
+    test_index = 1
 
-    if test_index == 0 : 
+    if test_index == 0 :
 
         # 執行檔案列出功能
         folder_name = "V1.1"
@@ -480,12 +500,12 @@ if __name__ == "__main__":
             print(f"Failed to rename file '{old_file_name}'")
 
 
-        pass 
+        pass
 
-    elif test_index == 1 : 
+    elif test_index == 1 :
 
         csv_name = "file_list_free"  # 請替換成你的CSV檔案路徑
         drive_folder_name = "V1.2"  # 替換成你的Google Drive資料夾名稱
-        google_ctrl.update_file_list_csv(csv_name, drive_folder_name)
+        # google_ctrl.update_file_list_csv(csv_name, drive_folder_name)
 
-        pass 
+        pass

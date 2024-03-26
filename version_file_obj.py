@@ -6,7 +6,7 @@ import win32api
 # fmt: off
 class version_file_update:
     def __init__(self):
-        # self.app = xw.App(visible=True)
+        self.app = xw.App(visible=True)
         self.column_index = []
         self.row_index = []
         self.default_file_path = "G:/我的雲端硬碟/py_google/"
@@ -15,14 +15,16 @@ class version_file_update:
         # same version or other issue to exit
         self.cancel = 0
     def open_file(self, file_name=None):
-        # self.wb = self.app.books.open(file_path)
+
         if file_name == None:
             self.full_path = self.default_file_path + self.default_file_name + ".xlsx"
             pass
         else:
             self.full_path = f"{self.default_file_path}{file_name}.xlsx"
             pass
-        self.wb = xw.Book(self.full_path)
+        self.wb = self.app.books.open(self.full_path)
+        # 240326 not to use this one, prevent app issue, not close or interrupt by others
+        # self.wb = xw.Book(self.full_path)
         self.sheet = self.wb.sheets[0]  # 打開第一個工作表
         self.column_index = [
             self.sheet.range((1, col)).value
@@ -104,7 +106,7 @@ class version_file_update:
         if cancel_save == 0 :
             self.wb.save(self.full_path)
         self.wb.close()
-        # self.app.quit()
+        self.app.quit()
 
     def auto_update(self, file_list0, version_name0, version_comment0, file_name0=None):
         """
