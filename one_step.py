@@ -29,6 +29,7 @@ cred_ctrl = cre.crediential_helper()
 cred_dict = cred_ctrl.load_credentials()
 google_drive_ctrl = GoogleDrive_Ctrl_obj(cred_dict=cred_dict)
 
+version_updater = version_file_update()
 # 設置版本名和文件列表
 # version_name = "V1.0"  # 版本名稱，來自 one_step.py
 # file_list = ["main_out", "pio_ws2812_obj"]  # 文件列表，來自 one_step.py
@@ -45,11 +46,11 @@ def get_file_ids_and_update(version_name, file_list, type_folder, comments0= Non
     # find the type folder_id
     type_f_id = google_drive_ctrl.get_folder_id_by_name(type_folder)
     # 獲取每個文件的 file_id
-    # use this as the parent folder for the version searching 
+    # use this as the parent folder for the version searching
     version_f_id = google_drive_ctrl.get_folder_id_by_name(version_name, parent_folder_id=type_f_id)
-    
+
     for file_name in file_list:
-        
+
         file_id = google_drive_ctrl.get_file_id_by_name(f"{file_name}", parent_folder_id=version_f_id)
         if file_id:
             file_ids[f"{file_name}"] = file_id
@@ -58,7 +59,7 @@ def get_file_ids_and_update(version_name, file_list, type_folder, comments0= Non
 
     # 更新 Excel 列表
     if file_ids:
-        version_updater = version_file_update()
+        # version_updater = version_file_update()
         version_updater.auto_update(file_ids, version_name, comments0, type_folder)
 
     return file_ids
@@ -156,7 +157,7 @@ def delete_local_folder(type_folder, version_name):
 if __name__ == "__main__":
 
     # input the control information, choose add, del, list
-    mode = "del"
+    mode = "list2"
     # input the version_name (folder name)
     version_name = "V1.3"
     # type selection for free or full
@@ -166,8 +167,8 @@ if __name__ == "__main__":
         "main_out",
         "pio_ws2812_obj",
     ]
-    comments = "this is version comments1 "
-    time_wait = 10
+    comments = "this is version comments1"
+    time_wait = 8
 
     if type_sel == "free":
         folder_name="free_version"
@@ -193,7 +194,6 @@ if __name__ == "__main__":
         print(f"now is in {mode} mode ~ type-{type_sel}")
         # google_drive_ctrl.empty_trash()
         files_in_folder = google_drive_ctrl.list_files_in_folder(folder_name, depth_scan=1)
-
         pass
 
     elif mode == "del":
@@ -202,6 +202,15 @@ if __name__ == "__main__":
         if x == "y":
             delete_version_by_name(version_name, folder_name)
             delete_local_folder(folder_name, version_name)
+
+    elif mode == "list2" :
+        # list excel file version
+        print(f"now is in {mode} mode ~ type-{type_sel}")
+        version_updater.open_file(folder_name)
+        res_list = version_updater.column_index
+        res_list.remove("file_name")
+        print(f"we have in excel - {res_list}")
+        version_updater.finished_check()
 
     else:
         print(f"input: {mode} wrong, with version: {version_name}")

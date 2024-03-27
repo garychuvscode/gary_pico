@@ -10,7 +10,7 @@ need to have device selection window and
 choose different device info to build up
 the firmware update process with licensing
 """
-
+import subprocess
 # import for excel control
 from datetime import datetime
 
@@ -54,7 +54,7 @@ class startup_pico ():
             "https://drive.google.com/file/d/1a0AbOXnOGc0sF3l0iGvAu2P167-ft3mR/view?usp=drive_link",
         ]
 
-        self.default_temp_path = "C:/g_temp_pico"
+        self.default_temp_path = "C:/g_temp_pico/"
         self.startup_link = "https://drive.google.com/file/d/1r21Myem2Ag6_dP-ToRL3jnLJ7tLcHcDQ/view?usp=drive_link"
         self.startup_name = "file_list_free.csv"
         self.startup_id = "1r21Myem2Ag6_dP-ToRL3jnLJ7tLcHcDQ"
@@ -66,6 +66,9 @@ class startup_pico ():
 
         # choose the file list to be id or link
         self.id_link = 'id'
+
+        self.comments_print = "NA"
+        self.file_list_for_update = ""
 
         pass
 
@@ -148,7 +151,7 @@ class startup_pico ():
         file_id = file_link.split("/")[5]
 
 
-        destination_path = self.default_temp_path + "/" + file_name0
+        destination_path = self.default_temp_path + file_name0
         # Create the directory if it does not exist
         os.makedirs(os.path.dirname(destination_path), exist_ok=True)
 
@@ -259,7 +262,7 @@ class startup_pico ():
     def find_elements_with_prefix(self, file_path=None, prefix="Ver_"):
         try:
             if file_path == None:
-                file_path = f"{self.default_temp_path}/{self.startup_name}"
+                file_path = f"{self.default_temp_path}{self.startup_name}"
             elements_with_prefix = []  # 用於存儲找到的符合條件的元素
 
             with open(file_path, mode='r', newline='', encoding='utf-8') as csvfile:
@@ -284,8 +287,8 @@ class startup_pico ():
         """
 
         # 讀取 CSV 檔案
-        df = pd.read_csv('C:/g_temp_pico/file_list_free.csv')
-
+        # df = pd.read_csv('C:/g_temp_pico/list_free_version.csv')
+        df = pd.read_excel('C:/g_temp_pico/list_free_version.xlsx')
         try:
             # 檢查提供的版本是否存在於 DataFrame 中
             if version not in df.columns:
@@ -294,12 +297,29 @@ class startup_pico ():
             # 建立字典：file_name 為鍵，指定版本的檔案連結為值
             version_dict = df.set_index('file_name')[version].dropna().to_dict()
 
+            # get the index and element out from the dictionary
+            # self.comments_print = version_dict.pop('comments')
+            self.comments_print = version_dict.get('comments')
+            self.file_list_for_update = list(version_dict.keys())
+
             return version_dict
         except Exception as e:
             print(f'Error: {e}')
             version_dict = {}
             return version_dict
 
+    def execute_commands(self, commands):
+        """執行一系列系統命令"""
+        for command in commands:
+            process = subprocess.run(command, shell=True, capture_output=True, text=True)
+            if process.returncode == 0:
+                print(f"command '{command}' done:")
+                print(process.stdout)
+            else:
+                print(f"command '{command}' fail:")
+                print(process.stderr)
+
+    def pico_trace_gen(self, port, file_name, trace=".\\")
 
     def startup_loop(self):
         '''
@@ -400,12 +420,15 @@ class startup_pico ():
             if file_name != 'comments':  # 排除非文件鏈接的條目
                 self.download_file_from_drive_id(id_in_list)  # 使用文件下載函數下載文件
 
-        # download finished here
+                # also put the file into pico
+
+        # download finished here, start to put the file into pico based on COM port
 
 
+
         self.pwd(f"")
-        self.pwd(f"")
-        self.pwd(f"")
+        self.pwd(f"About this version: {self.comments_print}")
+        self.pwd(f"The download had finished, please turn off program and re-plug Pico for new start")
         self.pwd(f"")
         self.pwd(f"")
 
@@ -419,11 +442,11 @@ class startup_pico ():
 
 
 world_of_pico = startup_pico()
-world_of_pico.startup_loop()
+# world_of_pico.startup_loop()
 
 
 # Testing code
 if __name__ == "__main__":
-
+    world_of_pico.version_select()
 
     pass

@@ -2,11 +2,12 @@ import xlwings as xw
 
 # also for the jump out window, same group with win32con
 import win32api
+import time
 
 # fmt: off
 class version_file_update:
     def __init__(self):
-        self.app = xw.App(visible=True)
+        # self.app = xw.App(visible=True)
         self.column_index = []
         self.row_index = []
         self.default_file_path = "G:/我的雲端硬碟/py_google/"
@@ -15,6 +16,8 @@ class version_file_update:
         # same version or other issue to exit
         self.cancel = 0
     def open_file(self, file_name=None):
+        # only open excel when open file
+        self.app = xw.App(visible=True)
 
         if file_name == None:
             self.full_path = self.default_file_path + "list_" + self.default_file_name + ".xlsx"
@@ -108,6 +111,14 @@ class version_file_update:
         self.wb.close()
         self.app.quit()
 
+    def finished_check(self):
+        '''
+        finished check and close (for case just open)
+        '''
+        time.sleep(2)
+        self.wb.close()
+        self.app.quit()
+
     def auto_update(self, file_list0, version_name0, version_comment0, file_name0=None):
         """
         auto update just one function call
@@ -155,7 +166,7 @@ class version_file_update:
 if __name__ == "__main__":
 
     # overall control will be put at the other file
-    test_index = 1
+    test_index = 0
 
     # 初始化 version_file_update 對象
     vf_update = version_file_update()
@@ -163,16 +174,16 @@ if __name__ == "__main__":
     if test_index == 0 :
 
         # 假定Excel文件名為 'test.xlsx'，位於當前目錄
-        file_path = "G:/我的雲端硬碟/py_google/file_list_free.xlsx"
-
+        # file_path = "G:/我的雲端硬碟/py_google/free_version.xlsx"
+        file_name = "free_version"
         # # 初始化 version_file_update 對象
         # vf_update = version_file_update()
 
         # 打開 Excel 文件並加載索引
-        vf_update.open_file(file_path)
+        vf_update.open_file(file_name)
 
         # 假定要選擇的版本名為 'Ver_1.0'
-        version_to_select = "Ver_1.0"
+        version_to_select = "Ver_1.3"
         selected_version_content = vf_update.version_select(version_to_select)
         print(f"內容於 {version_to_select} 版本中：")
         for row_index, content in selected_version_content.items():
