@@ -10,17 +10,17 @@ class version_file_update:
         self.column_index = []
         self.row_index = []
         self.default_file_path = "G:/我的雲端硬碟/py_google/"
-        self.default_file_name = "file_list_full"
+        self.default_file_name = "full_version"
         self.full_path = ""
         # same version or other issue to exit
         self.cancel = 0
     def open_file(self, file_name=None):
 
         if file_name == None:
-            self.full_path = self.default_file_path + self.default_file_name + ".xlsx"
+            self.full_path = self.default_file_path + "list_" + self.default_file_name + ".xlsx"
             pass
         else:
-            self.full_path = f"{self.default_file_path}{file_name}.xlsx"
+            self.full_path = f"{self.default_file_path}list_{file_name}.xlsx"
             pass
         self.wb = self.app.books.open(self.full_path)
         # 240326 not to use this one, prevent app issue, not close or interrupt by others
@@ -98,10 +98,10 @@ class version_file_update:
 
     def save_close(self, file_name=None, cancel_save=0):
         if file_name == None:
-            self.full_path = self.default_file_path + self.default_file_name + ".xlsx"
+            self.full_path = self.default_file_path +  "list_" + self.default_file_name + ".xlsx"
             pass
         else:
-            self.full_path = f"{self.default_file_path}{file_name}.xlsx"
+            self.full_path = f"{self.default_file_path}list_{file_name}.xlsx"
             pass
         if cancel_save == 0 :
             self.wb.save(self.full_path)

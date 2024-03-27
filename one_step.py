@@ -34,7 +34,7 @@ google_drive_ctrl = GoogleDrive_Ctrl_obj(cred_dict=cred_dict)
 # file_list = ["main_out", "pio_ws2812_obj"]  # 文件列表，來自 one_step.py
 # file_list.append("main")  # 添加額外的 main.py 文件
 
-def get_file_ids_and_update(version_name, file_list, comments0= None):
+def get_file_ids_and_update(version_name, file_list, type_folder, comments0= None):
     """
     獲取特定版本資料夾中每個文件的 file_id 並更新 Excel 列表。
     """
@@ -42,18 +42,24 @@ def get_file_ids_and_update(version_name, file_list, comments0= None):
     if comments0 == None :
         comments0 = version_name
 
+    # find the type folder_id
+    type_f_id = google_drive_ctrl.get_folder_id_by_name(type_folder)
     # 獲取每個文件的 file_id
+    # use this as the parent folder for the version searching 
+    version_f_id = google_drive_ctrl.get_folder_id_by_name(version_name, parent_folder_id=type_f_id)
+    
     for file_name in file_list:
-        file_id = google_drive_ctrl.get_file_id_by_name(f"{file_name}.mpy", parent_folder_id=google_drive_ctrl.get_folder_id_by_name(version_name))
+        
+        file_id = google_drive_ctrl.get_file_id_by_name(f"{file_name}", parent_folder_id=version_f_id)
         if file_id:
-            file_ids[f"{file_name}.mpy"] = file_id
+            file_ids[f"{file_name}"] = file_id
         else:
-            print(f"file not found: {file_name}.mpy")
+            print(f"file not found: {file_name}")
 
     # 更新 Excel 列表
     if file_ids:
         version_updater = version_file_update()
-        version_updater.auto_update(file_ids, version_name, comments0)
+        version_updater.auto_update(file_ids, version_name, comments0, type_folder)
 
     return file_ids
 
@@ -75,6 +81,7 @@ def convert_and_move_files(file_list, version_name, type_folder):
     - version_name (str): 雲端硬碟中版本資料夾的名稱
     - type_folder (str): 分類資料夾的名稱
     """
+    updated_file_list = []  # 创建一个空列表用于存储更新的文件列表
     try:
         # 目的資料夾的基本路徑
         base_file_dist = f"G:\\我的雲端硬碟\\pico_release\\{type_folder}\\{version_name}"
@@ -94,16 +101,24 @@ def convert_and_move_files(file_list, version_name, type_folder):
 
             print(f"{file_name}.mpy has been converted and moved successfully.")
 
+            # 將更新的文件名（包含副檔名）添加到更新的文件列表中
+            updated_file_list.append(f"{file_name}.mpy")
+
         # 將 main.py 複製到目的資料夾
         shutil.copy("main.py", base_file_dist)
         print('main.py copy done')
+        # 將 main.py 的更新文件名添加到更新的文件列表中
+        updated_file_list.append("main.py")
 
     except Exception as e:
         print(f"Error occurred: {e}")
 
+    # 返回包含 main.py 的更新文件列表
+    return updated_file_list
+
 # ===========================================
 
-def delete_version_by_name(version_name):
+def delete_version_by_name(version_name, type_folder):
     """
     根据提供的 version_name 删除指定的版本。
     """
@@ -112,7 +127,7 @@ def delete_version_by_name(version_name):
         version_updater = version_file_update()
 
         # 删除指定的版本
-        version_updater.auto_delete(version_name0=version_name)
+        version_updater.auto_delete(version_name0=version_name, file_name0=type_folder)
 
         print(f" {version_name} has been deleted ")
     except Exception as e:
@@ -141,11 +156,11 @@ def delete_local_folder(type_folder, version_name):
 if __name__ == "__main__":
 
     # input the control information, choose add, del, list
-    mode = "add"
+    mode = "del"
     # input the version_name (folder name)
-    version_name = "V1.1"
+    version_name = "V1.3"
     # type selection for free or full
-    type_sel = "full"
+    type_sel = "free"
     # input the list of file_name for this version (main.py auto include)
     file_list = [
         "main_out",
@@ -167,15 +182,16 @@ if __name__ == "__main__":
 
             file_list_2 = convert_and_move_files(file_list, version_name, folder_name)
 
-            # for i in range(100 + 1):
-            #     time.sleep(time_wait/100)  # 模擬一些工作
-            #     pg.prog_bar_2(i, 100, prefix='Upload file:', suffix='Complete', length=50, fill_str='New ver done', fill_char='>', adjust='left')
+            for i in range(100 + 1):
+                time.sleep(time_wait/100)  # 模擬一些工作
+                pg.prog_bar_2(i, 100, prefix='Upload file:', suffix='Complete', length=50, fill_str='New ver done', fill_char='>', adjust='left')
 
-            file_ids = get_file_ids_and_update(version_name, file_list, comments)
+            file_ids = get_file_ids_and_update(version_name, file_list_2, folder_name, comments)
             print("updated ids", file_ids)
 
     elif mode == "list" :
         print(f"now is in {mode} mode ~ type-{type_sel}")
+        # google_drive_ctrl.empty_trash()
         files_in_folder = google_drive_ctrl.list_files_in_folder(folder_name, depth_scan=1)
 
         pass
@@ -184,7 +200,7 @@ if __name__ == "__main__":
         print(f"now is in {mode} mode ~ , type-{type_sel}, version-{version_name}")
         x = input("are you sure? y or n ")
         if x == "y":
-            delete_version_by_name(version_name)
+            delete_version_by_name(version_name, folder_name)
             delete_local_folder(folder_name, version_name)
 
     else:

@@ -170,7 +170,7 @@ class GoogleDrive_Ctrl_obj:
 
     # ==============================
 
-    def get_folder_id_by_name(self, folder_name):
+    def get_folder_id_by_name(self, folder_name, parent_folder_id=None):
         """
         根據資料夾名稱獲取資料夾的 ID。
         Args:
@@ -181,10 +181,14 @@ class GoogleDrive_Ctrl_obj:
         query = (
             f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'"
         )
+        if parent_folder_id:
+            query += f" and '{parent_folder_id}' in parents"
+
         response = self.service.files().list(q=query, fields="files(id)").execute()
         folders = response.get("files", [])
-
+        
         if folders:
+            print(f'get folder: {folder_name} with id {folders[0].get("id")} \n from parent {parent_folder_id}')
             return folders[0].get("id")
         return None
 
@@ -203,8 +207,10 @@ class GoogleDrive_Ctrl_obj:
             query += f" and '{parent_folder_id}' in parents"
         response = self.service.files().list(q=query, fields="files(id)").execute()
         files = response.get("files", [])
+        
 
         if files:
+            print(f'get file: {file_name} with id {files[0].get("id")} \n from parent {parent_folder_id}')
             return files[0].get("id")
         return None
 
@@ -250,15 +256,24 @@ class GoogleDrive_Ctrl_obj:
         folder_name (str): 資料夾名稱。
         depth_scan (int): 掃描的最大深度。0 表示掃描所有層，正整數表示要掃描的層數。默認為 3。
         """
+        # clear trash before search, prevent to see deleted version with same name
+        self.empty_trash()
+
         try:
             # 查詢資料夾 ID
             folder_id = None
             page_token = None
             while True:
+                """
+                query (q): content and note: 
+                mimeType='application/vnd.google-apps.folder'：查找的是文件夹。
+                name='{folder_name}'：文件夹的名称必须匹配 folder_name 变量的值。
+                trashed = false：文件夹不在回收站中。
+                """
                 response = (
                     self.service.files()
                     .list(
-                        q=f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'",
+                        q=f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}' and trashed = false",
                         spaces="drive",
                         fields="nextPageToken, files(id, name)",
                         pageToken=page_token,
@@ -347,6 +362,16 @@ class GoogleDrive_Ctrl_obj:
             print(f"Error renaming file: {e}")
             return False
 
+    def empty_trash(self):
+        """
+        清空 Google Drive 的垃圾桶。
+        """
+        try:
+            self.service.files().emptyTrash().execute()
+            print("Trash has been emptied successfully.")
+        except Exception as e:
+            print(f"An error occurred while trying to empty the trash: {e}")
+    
     def delete_folder_by_name(self, folder_name):
         """
         根據資料夾名稱刪除 Google Drive 上的資料夾。
