@@ -157,9 +157,9 @@ def delete_local_folder(type_folder, version_name):
 if __name__ == "__main__":
 
     # input the control information, choose add, del, list
-    mode = "list2"
+    mode = "list"
     # input the version_name (folder name)
-    version_name = "V1.3"
+    version_name = "V1.1"
     # type selection for free or full
     type_sel = "free"
     # input the list of file_name for this version (main.py auto include)
@@ -167,7 +167,7 @@ if __name__ == "__main__":
         "main_out",
         "pio_ws2812_obj",
     ]
-    comments = "this is version comments1"
+    comments = "end in blue"
     time_wait = 8
 
     if type_sel == "free":

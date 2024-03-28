@@ -49,23 +49,20 @@ class startup_pico ():
             "https://drive.google.com/file/d/1XacaFMCTDehv7wjFZgKxgRFxwUHD9vv-/view?usp=drive_link",
         ]
         # file: pico, yd
-        self.device_info = [
-            "https://drive.google.com/file/d/1t5zPDsEFmmym-AeB6Yni82hOb5dprS1i/view?usp=drive_link",
-            "https://drive.google.com/file/d/1a0AbOXnOGc0sF3l0iGvAu2P167-ft3mR/view?usp=drive_link",
-        ]
+        self.device_info = {
+            "pico":"https://drive.google.com/file/d/1t5zPDsEFmmym-AeB6Yni82hOb5dprS1i/view?usp=drive_link",
+            "yd":"https://drive.google.com/file/d/1a0AbOXnOGc0sF3l0iGvAu2P167-ft3mR/view?usp=drive_link",
+        }
 
         self.default_temp_path = "C:/g_temp_pico/"
-        self.startup_link = "https://drive.google.com/file/d/1r21Myem2Ag6_dP-ToRL3jnLJ7tLcHcDQ/view?usp=drive_link"
-        self.startup_name = "file_list_free.csv"
-        self.startup_id = "1r21Myem2Ag6_dP-ToRL3jnLJ7tLcHcDQ"
+        self.startup_link = "https://drive.google.com/file/d/135qWkaSVnfPvoe9DF4w-KlG1lwtTEtEQ/view?usp=drive_link"
+        self.startup_name = "list_free_version.xlsx"
+        self.startup_id = "135qWkaSVnfPvoe9DF4w-KlG1lwtTEtEQ"
 
         self.file_link_model = f"https://drive.google.com/file/d/{self.startup_id}/view"
         # turn off all the print delay and turn on all the index print
         # 0 => gary test mode, 1 => on line mode
         self.grace_mode = 0
-
-        # choose the file list to be id or link
-        self.id_link = 'id'
 
         self.comments_print = "NA"
         self.file_list_for_update = ""
@@ -79,7 +76,7 @@ class startup_pico ():
         return f"https://drive.google.com/file/d/{file_id0}/view"
 
 
-    def grace_print(self, content=""):
+    def grace_print(self, content):
         '''
         print the information for engineer mode
         only print when grace_mode=0, gary test mode
@@ -301,7 +298,7 @@ class startup_pico ():
             # self.comments_print = version_dict.pop('comments')
             self.comments_print = version_dict.get('comments')
             self.file_list_for_update = list(version_dict.keys())
-
+            self.grace_print(f"version_select done")
             return version_dict
         except Exception as e:
             print(f'Error: {e}')
@@ -313,84 +310,87 @@ class startup_pico ():
         for command in commands:
             process = subprocess.run(command, shell=True, capture_output=True, text=True)
             if process.returncode == 0:
-                print(f"command '{command}' done:")
-                print(process.stdout)
+                self.grace_print(f"command '{command}' done:")
+                self.grace_print(process.stdout)
             else:
-                print(f"command '{command}' fail:")
-                print(process.stderr)
+                self.grace_print(f"command '{command}' fail:")
+                self.grace_print(process.stderr)
 
-    def pico_trace_gen(self, port, file_name, trace=".\\")
+    def pico_command_gen(self, port, file_name, trace=".\\"):
+        """
+        pico command string gen 
+        trace reserve first, for future used
+        """
+        self.grace_print(f"pico_cmd: COM{port}, trace: {trace}, name: {file_name}")
+        return f"ampy --port COM{port} put {trace}{file_name}"
 
     def startup_loop(self):
         '''
         process of startup
         '''
-        # self.pwd(f"Welcome to Gary's Pico tool, initialization going to start")
-        # self.pwd(f"We hope to help engineers being more efficient on work")
-        # self.pwd(f"And being closer to work life balance")
-        # self.pwd(f"For questions and issue, please contact: gary061508@gmail.com")
-        # self.pwd(f"Thanks and enjoy, by Gary Chu")
-        # self.pwd(f"\nPlease make sure board is plugged in and COM number is known")
+        self.pwd(f"Welcome to Gary's Pico tool, initialization going to start")
+        self.pwd(f"We hope to help engineers being more efficient on work")
+        self.pwd(f"And being closer to work life balance")
+        self.pwd(f"For questions and issue, please contact: gary061508@gmail.com")
+        self.pwd(f"Thanks and enjoy, by Gary Chu")
+        self.pwd(f"\nPlease make sure board is plugged in and COM number is known")
 
-        # while 1 :
-        #     # device selection
-        #     self.pwd(f"What kind of board your what to use now? input: 'pico' for original or 'yd' for YD-2040")
-        #     tpye_sel = input()
-        #     if tpye_sel == "pico":
-        #         # this is original pico
-        #         device_file = 'device_info_pico.py'
+        while 1 :
+            # device selection
+            self.pwd(f"What kind of board your what to use now? input: 'pico' for original or 'yd' for YD-2040")
+            tpye_sel = input()
+            if tpye_sel == "pico":
+                # this is original pico
+                device_file = 'device_info_pico.mpy'
 
-        #         pass
-        #     elif tpye_sel == "yd":
-        #         # this is YD2040
-        #         device_file = 'device_info_yd.py'
+                pass
+            elif tpye_sel == "yd":
+                # this is YD2040
+                device_file = 'device_info_yd.mpy'
 
-        #         pass
-        #     else:
-        #         self.pwd(f"GG, input incorrect, please try again~ @@")
+                pass
+            else:
+                self.pwd(f"GG, input incorrect, please try again~ @@")
 
-        #     if tpye_sel == "pico" or tpye_sel == "yd" :
-        #         self.pwd(f"is '{tpye_sel}' correct? 'y' for next step and 'n' for re-input ")
-        #         temp_ans = input()
-        #         if temp_ans == 'y':
-        #             break
-
-
-        #     # end of while
-        #     pass
-        # self.pwd(f"'{tpye_sel}' is choose by user")
+            if tpye_sel == "pico" or tpye_sel == "yd" :
+                self.pwd(f"is '{tpye_sel}' correct? 'y' for next step and 'n' for re-input ")
+                temp_ans = input()
+                if temp_ans == 'y':
+                    break
 
 
-        # while 1 :
-        #     # COM number selection
+            # end of while
+            pass
+        self.pwd(f"'{tpye_sel}' is choose by user")
 
-        #     self.pwd(f"Please enter to correct COM number for plugged board")
-        #     com_num = input()
 
-        #     try:
-        #         com_test = rm.open_resource(f"COM{com_num}")
+        while 1 :
+            # COM number selection
 
-        #         # close if success
-        #         self.pwd(f"COM{com_num}, connteced ok, now update firmware")
-        #         # close and release COM port
-        #         com_test.close()
+            self.pwd(f"Please enter to correct COM number for plugged board")
+            com_num = input()
 
-        #         # break the loop after COM port number input correct
-        #         break
+            try:
+                com_test = rm.open_resource(f"COM{com_num}")
 
-        #     except Exception as e:
+                # close if success
+                self.pwd(f"COM{com_num}, connteced ok, now update firmware")
+                # close and release COM port
+                com_test.close()
 
-        #         self.pwd(f"GG, input incorrect, please try again, error message:")
-        #         print(e)
+                # break the loop after COM port number input correct
+                break
 
-        #     # end while
-        #     pass
+            except Exception as e:
+
+                self.pwd(f"GG, input incorrect, please try again, error message:")
+                print(e)
+
+            # end while
+            pass
 
         # check available version and list for user to select:
 
-
-        # 240319: the csv in google can't be read, error
-        # ver_info = self.get_elements_from_link()
         # self.download_file_from_drive(self.startup_link)
         self.download_file_from_drive_id(self.startup_id)
         ver_info = self.find_elements_with_prefix()
@@ -421,32 +421,40 @@ class startup_pico ():
                 self.download_file_from_drive_id(id_in_list)  # 使用文件下載函數下載文件
 
                 # also put the file into pico
-
+                cmds = self.pico_command_gen(port=com_num, file_name=file_name)
+                self.execute_commands(cmds)
+        
+        # download and put device info 
+        link = self.device_info[tpye_sel]
+        self.download_file_from_drive(file_link=link)
+        cmds = self.pico_command_gen(port=com_num, file_name=device_file)
+        self.execute_commands(cmds)
         # download finished here, start to put the file into pico based on COM port
-
-
-
-        self.pwd(f"")
-        self.pwd(f"About this version: {self.comments_print}")
-        self.pwd(f"The download had finished, please turn off program and re-plug Pico for new start")
-        self.pwd(f"")
-        self.pwd(f"")
-
-
-
 
         # delete all the file download when process done
         self.delete_folder()
+
+        self.pwd(f"firmware download done, thanks and enjoy!")
+        self.pwd(f"About this version: {self.comments_print}")
+        self.pwd(f"Looking forward to have discussion and feedback from you! :)")
+        self.pwd(f"Please turn off program and re-plug Pico for new start")
+        print("Press Enter to exit...")
+        input()  # 等待用戶按下 Enter 鍵
+        # self.pwd(f"")
+        # self.pwd(f"")
+
+        # # delete all the file download when process done
+        # self.delete_folder()
         pass
 
 
 
 world_of_pico = startup_pico()
-# world_of_pico.startup_loop()
+world_of_pico.startup_loop()
 
 
 # Testing code
 if __name__ == "__main__":
-    world_of_pico.version_select()
+    # world_of_pico.version_select()
 
     pass
